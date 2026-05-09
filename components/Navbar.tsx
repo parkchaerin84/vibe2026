@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
@@ -8,6 +9,7 @@ const NAV_ITEMS = [
   { href: "/car-status", label: "칸 운영 관리", icon: "🚇" },
   { href: "/share-seat", label: "하차 공유", icon: "📍" },
   { href: "/community", label: "민원 커뮤니티", icon: "📢" },
+  { href: "/emergency", label: "긴급 신고", icon: "🚨" },
 ];
 
 export default function Navbar() {
@@ -18,7 +20,7 @@ export default function Navbar() {
       <div className="max-w-5xl mx-auto px-4">
         <div className="flex items-center justify-between h-14">
           <Link href="/" className="flex items-center gap-2 font-bold text-lg text-blue-700">
-            <span className="text-2xl">🚆</span>
+            <Image src="/logo.png" alt="SubwayEasy" width={32} height={32} />
             <span>SubwayEasy</span>
           </Link>
           <div className="flex items-center gap-1">
