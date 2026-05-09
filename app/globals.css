@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #f8fafc;
+  --foreground: #1e293b;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", Arial,
+    sans-serif;
+}
+
+@layer utilities {
+  .subway-car {
+    @apply relative flex flex-col items-center justify-center rounded-lg border-2 cursor-pointer transition-all duration-200 select-none;
+    min-width: 56px;
+    min-height: 72px;
+  }
+  .subway-car-recommended {
+    @apply scale-110 shadow-lg;
+  }
+  .congestion-1 { @apply bg-green-100 border-green-400; }
+  .congestion-2 { @apply bg-lime-100 border-lime-400; }
+  .congestion-3 { @apply bg-yellow-100 border-yellow-400; }
+  .congestion-4 { @apply bg-orange-100 border-orange-400; }
+  .congestion-5 { @apply bg-red-100 border-red-400; }
+}
