@@ -143,9 +143,15 @@ export default function Home() {
   if (showLanding) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-8rem)] text-center px-4">
-        <Image src="/logo.png" alt="SubwayEasy" width={120} height={120} className="mb-6" />
+        <Image
+          src="/logo.png"
+          alt="SubwayEasy"
+          width={300}
+          height={300}
+          className="w-48 sm:w-64 md:w-72 h-auto mb-8"
+        />
         <h1 className="text-3xl font-black text-gray-800 mb-2">SubwayEasy</h1>
-        <p className="text-gray-500 mb-10 text-lg">더 편한 지하철 탑승 경험</p>
+        <p className="text-gray-500 mb-12 text-lg">더 편한 지하철 탑승 경험</p>
         <button
           onClick={() => setShowLanding(false)}
           className="px-10 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg rounded-2xl shadow-lg transition-all active:scale-95"
