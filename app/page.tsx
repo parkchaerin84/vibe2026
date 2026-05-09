@@ -12,21 +12,94 @@ import {
 } from "@/data/subwayData";
 import SubwayCarDiagram from "@/components/SubwayCarDiagram";
 
+interface Favorite {
+  id: string;
+  lineName: string;
+  lineColor: string;
+  stationName: string;
+  destinationName: string;
+}
+
+const STORAGE_KEY = "subwayeasy_favorites";
+
 export default function Home() {
   const [selectedLine, setSelectedLine] = useState<SubwayLine | null>(null);
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
+  const [selectedDestination, setSelectedDestination] = useState<Station | null>(null);
   const [selectedConditions, setSelectedConditions] = useState<Condition[]>([]);
   const [showResult, setShowResult] = useState(false);
+  const [favorites, setFavorites] = useState<Favorite[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      return stored ? (JSON.parse(stored) as Favorite[]) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [savedFeedback, setSavedFeedback] = useState(false);
+
+  const persistFavorites = (updated: Favorite[]) => {
+    setFavorites(updated);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    } catch {}
+  };
+
+  const handleAddFavorite = () => {
+    if (!selectedLine || !selectedStation || !selectedDestination) return;
+    const duplicate = favorites.some(
+      (f) =>
+        f.lineName === selectedLine.name &&
+        f.stationName === selectedStation.name &&
+        f.destinationName === selectedDestination.name
+    );
+    if (duplicate) return;
+    const newFav: Favorite = {
+      id: Date.now().toString(),
+      lineName: selectedLine.name,
+      lineColor: selectedLine.color,
+      stationName: selectedStation.name,
+      destinationName: selectedDestination.name,
+    };
+    persistFavorites([...favorites, newFav]);
+    setSavedFeedback(true);
+    setTimeout(() => setSavedFeedback(false), 2000);
+  };
+
+  const handleDeleteFavorite = (id: string) => {
+    persistFavorites(favorites.filter((f) => f.id !== id));
+  };
+
+  const handleApplyFavorite = (fav: Favorite) => {
+    const line = SUBWAY_LINES.find((l) => l.name === fav.lineName);
+    if (!line) return;
+    const station = line.stations.find((s) => s.name === fav.stationName) ?? null;
+    const destination = line.stations.find((s) => s.name === fav.destinationName) ?? null;
+    setSelectedLine(line);
+    setSelectedStation(station);
+    setSelectedDestination(destination);
+    setSelectedConditions([]);
+    setShowResult(false);
+  };
 
   const handleLineSelect = (line: SubwayLine) => {
     setSelectedLine(line);
     setSelectedStation(null);
+    setSelectedDestination(null);
     setSelectedConditions([]);
     setShowResult(false);
   };
 
   const handleStationSelect = (station: Station) => {
     setSelectedStation(station);
+    setSelectedDestination(null);
+    setSelectedConditions([]);
+    setShowResult(false);
+  };
+
+  const handleDestinationSelect = (station: Station) => {
+    setSelectedDestination(station);
     setSelectedConditions([]);
     setShowResult(false);
   };
@@ -55,6 +128,16 @@ export default function Home() {
       ? selectedStation.recommendations[primaryCondition]
       : null;
 
+  const isFavorited =
+    selectedLine && selectedStation && selectedDestination
+      ? favorites.some(
+          (f) =>
+            f.lineName === selectedLine.name &&
+            f.stationName === selectedStation.name &&
+            f.destinationName === selectedDestination.name
+        )
+      : false;
+
   return (
     <div className="space-y-6">
       {/* Hero */}
@@ -64,6 +147,49 @@ export default function Home() {
           노선과 역, 원하는 조건을 선택하면 가장 적합한 칸을 추천해드려요.
         </p>
       </div>
+
+      {/* 즐겨찾기 목록 */}
+      {favorites.length > 0 && (
+        <section className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+          <h2 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+            <span>⭐</span> 즐겨찾기
+          </h2>
+          <div className="space-y-2">
+            {favorites.map((fav) => (
+              <div
+                key={fav.id}
+                className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2"
+              >
+                <button
+                  onClick={() => handleApplyFavorite(fav)}
+                  className="flex flex-1 items-center gap-2 text-left min-w-0"
+                >
+                  <span
+                    className="text-xs font-bold px-2 py-0.5 rounded-full text-white shrink-0"
+                    style={{ backgroundColor: fav.lineColor }}
+                  >
+                    {fav.lineName}
+                  </span>
+                  <span className="text-sm text-gray-700 font-medium truncate">
+                    {fav.stationName}
+                  </span>
+                  <span className="text-gray-400 text-xs shrink-0">→</span>
+                  <span className="text-sm text-gray-700 font-medium truncate">
+                    {fav.destinationName}
+                  </span>
+                </button>
+                <button
+                  onClick={() => handleDeleteFavorite(fav.id)}
+                  className="shrink-0 text-gray-300 hover:text-red-400 transition-colors text-xl leading-none"
+                  aria-label="즐겨찾기 삭제"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Step 1: Line Selection */}
       <section className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
@@ -98,7 +224,7 @@ export default function Home() {
         <section className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
           <h2 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
             <span className="bg-blue-600 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold">2</span>
-            역 선택
+            출발역 선택
             <span
               className="text-xs font-medium px-2 py-0.5 rounded-full text-white"
               style={{ backgroundColor: selectedLine.color }}
@@ -129,11 +255,65 @@ export default function Home() {
         </section>
       )}
 
-      {/* Step 3: Condition Selection */}
-      {selectedStation && (
+      {/* Step 3: Destination Selection */}
+      {selectedLine && selectedStation && (
         <section className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
           <h2 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
             <span className="bg-blue-600 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold">3</span>
+            도착역 선택
+            <span className="text-gray-400 font-normal text-xs">(즐겨찾기 저장 시 필요)</span>
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {selectedLine.stations
+              .filter((s) => s.id !== selectedStation.id)
+              .map((station) => (
+                <button
+                  key={station.id}
+                  onClick={() => handleDestinationSelect(station)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-all
+                    ${selectedDestination?.id === station.id
+                      ? "text-white border-transparent shadow"
+                      : "bg-white border-gray-200 text-gray-700 hover:border-gray-400"
+                    }`}
+                  style={
+                    selectedDestination?.id === station.id
+                      ? { backgroundColor: selectedLine.color }
+                      : {}
+                  }
+                >
+                  {station.name}
+                </button>
+              ))}
+          </div>
+
+          {/* 즐겨찾기 저장 버튼 */}
+          {selectedDestination && (
+            <div className="mt-4 flex items-center gap-3">
+              <button
+                onClick={handleAddFavorite}
+                disabled={isFavorited}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border-2 transition-all
+                  ${isFavorited
+                    ? "border-yellow-300 bg-yellow-50 text-yellow-600 cursor-default"
+                    : "border-yellow-400 bg-white text-yellow-600 hover:bg-yellow-50"
+                  }`}
+              >
+                <span>⭐</span>
+                {isFavorited ? "이미 저장된 즐겨찾기" : "즐겨찾기 저장"}
+              </button>
+              {savedFeedback && (
+                <span className="text-sm text-green-600 font-medium">✓ 저장되었습니다</span>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Step 4: Condition Selection */}
+      {selectedStation && (
+        <section className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+          <h2 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <span className="bg-blue-600 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold">4</span>
             원하는 조건 선택
             <span className="text-gray-400 font-normal text-xs">(복수 선택 가능)</span>
           </h2>
@@ -173,7 +353,7 @@ export default function Home() {
         </section>
       )}
 
-      {/* Step 4: Result */}
+      {/* Step 5: Result */}
       {showResult && result && selectedLine && selectedStation && (
         <section className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
           <h2 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -181,7 +361,6 @@ export default function Home() {
             추천 결과
           </h2>
 
-          {/* Big result display */}
           <div
             className="rounded-xl p-5 text-white text-center mb-5"
             style={{ background: `linear-gradient(135deg, ${selectedLine.color}, ${selectedLine.color}cc)` }}
@@ -193,7 +372,6 @@ export default function Home() {
             <p className="text-sm opacity-80">을 추천합니다</p>
           </div>
 
-          {/* Car diagram */}
           <div className="bg-gray-50 rounded-xl p-3 mb-4">
             <p className="text-xs text-gray-500 text-center mb-2">열차 위치 안내</p>
             <SubwayCarDiagram
@@ -204,7 +382,6 @@ export default function Home() {
             />
           </div>
 
-          {/* Reasons */}
           <div className="space-y-3">
             {result.reasons.map((reason, i) => (
               <div key={i} className="flex items-start gap-2 bg-blue-50 rounded-lg p-3">
@@ -213,7 +390,6 @@ export default function Home() {
               </div>
             ))}
 
-            {/* Congestion level */}
             {resultRec && (
               <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
                 <span className="text-sm text-gray-500">현재 혼잡도</span>
@@ -239,7 +415,6 @@ export default function Home() {
               </div>
             )}
 
-            {/* Tips */}
             {resultRec && resultRec.tips.length > 0 && (
               <div className="bg-yellow-50 rounded-lg p-3">
                 <p className="text-xs font-semibold text-yellow-700 mb-1">참고 팁</p>
