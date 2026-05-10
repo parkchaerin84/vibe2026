@@ -647,6 +647,201 @@ export const SUBWAY_LINES: SubwayLine[] = [
       },
     ],
   },
+  {
+    id: "gtxa",
+    number: "GTX-A",
+    name: "GTX-A",
+    color: "#E05A00",
+    textColor: "#ffffff",
+    totalCars: 10,
+    stations: [
+      {
+        id: "gtxa-unjeongjungang",
+        name: "운정중앙",
+        carStatuses: makeStatuses(10),
+        recommendations: {
+          quiet: { car: 1, reason: "1번 칸은 운정중앙 종착 방향 끝으로 탑승객이 적어 조용합니다.", tips: [], congestionLevel: 1 },
+          seats: { car: 10, reason: "10번 칸은 운정중앙 출발역 특성상 빈 좌석이 많습니다.", tips: [], congestionLevel: 1 },
+          transfer: { car: 5, reason: "5번 칸이 메인 출구와 버스 환승 구역과 가장 가깝습니다.", tips: ["GTX 특성상 심층 역사라 에스컬레이터 이동 시간이 깁니다."], congestionLevel: 2 },
+          pregnant: { car: 1, reason: "1번 칸 임산부 배려석이 역무원실과 가깝습니다.", tips: [], congestionLevel: 1 },
+        },
+      },
+      {
+        id: "gtxa-kintex",
+        name: "킨텍스",
+        carStatuses: makeStatuses(10),
+        recommendations: {
+          quiet: { car: 2, reason: "2번 칸은 전시장 방면 출구에서 멀어 비교적 조용합니다.", tips: ["전시 행사 기간엔 전 칸이 혼잡할 수 있어요."], congestionLevel: 2 },
+          seats: { car: 9, reason: "9번 칸은 킨텍스역에서 탑승 집중도가 낮아 자리 여유가 있습니다.", tips: [], congestionLevel: 2 },
+          transfer: { car: 6, reason: "6번 칸이 킨텍스 전시장 방면 출구와 가장 가깝습니다.", tips: [], congestionLevel: 3 },
+          pregnant: { car: 10, reason: "10번 칸 임산부 배려석이 엘리베이터와 가깝습니다.", tips: [], congestionLevel: 2 },
+        },
+      },
+      {
+        id: "gtxa-seoul",
+        name: "서울역",
+        carStatuses: makeStatuses(10),
+        recommendations: {
+          quiet: { car: 1, reason: "1번 칸은 GTX 서울역에서 일반 출구와 멀어 조용합니다.", tips: [], congestionLevel: 3 },
+          seats: { car: 10, reason: "10번 칸은 서울역 GTX 구간에서 비교적 자리 여유가 있습니다.", tips: [], congestionLevel: 3 },
+          transfer: { car: 5, reason: "5번 칸이 1·4호선 및 공항철도 환승 통로와 가장 가깝습니다.", tips: ["GTX 서울역은 심층 구조라 환승 시간이 5분 이상 소요될 수 있습니다."], congestionLevel: 4 },
+          pregnant: { car: 1, reason: "1번 칸 임산부 배려석이 역무원실 근처에 있습니다.", tips: [], congestionLevel: 3 },
+        },
+      },
+      {
+        id: "gtxa-suseo",
+        name: "수서",
+        carStatuses: makeStatuses(10),
+        recommendations: {
+          quiet: { car: 8, reason: "8번 칸은 수서역 주요 출구에서 멀어 한산합니다.", tips: [], congestionLevel: 2 },
+          seats: { car: 9, reason: "9번 칸은 수서역에서 탑승객이 집중되지 않아 자리 여유가 있습니다.", tips: [], congestionLevel: 2 },
+          transfer: { car: 4, reason: "4번 칸이 SRT·3호선·수인분당선 환승 통로와 가장 가깝습니다.", tips: ["SRT 환승은 별도 개찰구를 이용하세요."], congestionLevel: 3 },
+          pregnant: { car: 8, reason: "8번 칸 임산부 배려석이 엘리베이터와 가깝습니다.", tips: [], congestionLevel: 2 },
+        },
+      },
+      {
+        id: "gtxa-dongtan",
+        name: "동탄",
+        carStatuses: makeStatuses(10),
+        recommendations: {
+          quiet: { car: 10, reason: "10번 칸은 동탄역 종착 방향 끝으로 유동 인구가 적습니다.", tips: [], congestionLevel: 1 },
+          seats: { car: 1, reason: "1번 칸은 동탄 종착역 특성상 빈 좌석이 많습니다.", tips: [], congestionLevel: 1 },
+          transfer: { car: 5, reason: "5번 칸이 버스 환승 센터 방면 출구와 가장 가깝습니다.", tips: ["동탄 GTX역은 심층 구조라 지상까지 이동 시간이 소요됩니다."], congestionLevel: 2 },
+          pregnant: { car: 10, reason: "10번 칸 임산부 배려석이 엘리베이터와 가깝습니다.", tips: [], congestionLevel: 1 },
+        },
+      },
+    ],
+  },
+  {
+    id: "suinbundang",
+    number: "수인분당",
+    name: "수인분당선",
+    color: "#F5A200",
+    textColor: "#ffffff",
+    totalCars: 10,
+    stations: [
+      {
+        id: "suinbundang-wangsimni",
+        name: "왕십리",
+        carStatuses: makeStatuses(10),
+        recommendations: {
+          quiet: { car: 1, reason: "1번 칸은 왕십리 혼잡 구간에서도 비교적 조용합니다.", tips: [], congestionLevel: 4 },
+          seats: { car: 10, reason: "10번 칸은 왕십리역 수인분당선에서 자리 여유가 있습니다.", tips: [], congestionLevel: 3 },
+          transfer: { car: 5, reason: "5번 칸이 2호선·5호선·경의중앙선 환승 통로와 가장 가깝습니다.", tips: ["왕십리는 4개 노선이 교차하는 환승역이에요."], congestionLevel: 5 },
+          pregnant: { car: 1, reason: "1번 칸 임산부 배려석이 역무원실 근처입니다.", tips: [], congestionLevel: 3 },
+        },
+      },
+      {
+        id: "suinbundang-seolleung",
+        name: "선릉",
+        carStatuses: makeStatuses(10),
+        recommendations: {
+          quiet: { car: 2, reason: "2번 칸은 선릉역 주요 출구에서 멀어 비교적 조용합니다.", tips: [], congestionLevel: 3 },
+          seats: { car: 9, reason: "9번 칸은 선릉역에서 탑승객이 집중되지 않아 자리 여유가 있습니다.", tips: [], congestionLevel: 3 },
+          transfer: { car: 6, reason: "6번 칸이 2호선 환승 통로와 가장 가깝습니다.", tips: [], congestionLevel: 4 },
+          pregnant: { car: 9, reason: "9번 칸 임산부 배려석이 엘리베이터와 가깝습니다.", tips: [], congestionLevel: 2 },
+        },
+      },
+      {
+        id: "suinbundang-suseo",
+        name: "수서",
+        carStatuses: makeStatuses(10),
+        recommendations: {
+          quiet: { car: 10, reason: "10번 칸은 수서역 주요 출구에서 멀어 한산합니다.", tips: [], congestionLevel: 2 },
+          seats: { car: 1, reason: "1번 칸은 수서역에서 자리 여유가 있습니다.", tips: [], congestionLevel: 2 },
+          transfer: { car: 5, reason: "5번 칸이 GTX-A·SRT·3호선 환승 통로와 가장 가깝습니다.", tips: ["SRT 환승은 별도 개찰구를 이용하세요."], congestionLevel: 3 },
+          pregnant: { car: 10, reason: "10번 칸 임산부 배려석이 엘리베이터와 가깝습니다.", tips: [], congestionLevel: 2 },
+        },
+      },
+      {
+        id: "suinbundang-jeongja",
+        name: "정자",
+        carStatuses: makeStatuses(10),
+        recommendations: {
+          quiet: { car: 3, reason: "3번 칸은 정자역 카페거리 방면 출구에서 멀어 조용합니다.", tips: [], congestionLevel: 2 },
+          seats: { car: 8, reason: "8번 칸은 정자역에서 비교적 자리 여유가 있습니다.", tips: [], congestionLevel: 2 },
+          transfer: { car: 5, reason: "5번 칸이 신분당선 환승 통로와 가장 가깝습니다.", tips: ["신분당선은 별도 요금이 적용됩니다."], congestionLevel: 3 },
+          pregnant: { car: 3, reason: "3번 칸 임산부 배려석이 역무원실 근처입니다.", tips: [], congestionLevel: 2 },
+        },
+      },
+      {
+        id: "suinbundang-suwon",
+        name: "수원",
+        carStatuses: makeStatuses(10),
+        recommendations: {
+          quiet: { car: 2, reason: "2번 칸은 수원역 주요 출구에서 멀어 조용합니다.", tips: [], congestionLevel: 2 },
+          seats: { car: 10, reason: "10번 칸은 수원역 수인분당선에서 빈 좌석이 많습니다.", tips: [], congestionLevel: 2 },
+          transfer: { car: 5, reason: "5번 칸이 1호선·KTX 환승 통로 방향과 가장 가깝습니다.", tips: [], congestionLevel: 3 },
+          pregnant: { car: 10, reason: "10번 칸 임산부 배려석이 엘리베이터와 가깝습니다.", tips: [], congestionLevel: 2 },
+        },
+      },
+    ],
+  },
+  {
+    id: "sinbundang",
+    number: "신분당",
+    name: "신분당선",
+    color: "#D4003B",
+    textColor: "#ffffff",
+    totalCars: 6,
+    stations: [
+      {
+        id: "sinbundang-gangnam",
+        name: "강남",
+        carStatuses: makeStatuses(6),
+        recommendations: {
+          quiet: { car: 6, reason: "6번 칸은 강남역 신분당선 출구에서 멀어 비교적 조용합니다.", tips: [], congestionLevel: 4 },
+          seats: { car: 1, reason: "1번 칸은 강남역 신분당선에서 자리 여유가 있습니다.", tips: [], congestionLevel: 3 },
+          transfer: { car: 3, reason: "3번 칸이 2호선 환승 통로와 가장 가깝습니다.", tips: ["신분당선 강남역은 2호선과 별도 개찰구를 사용합니다."], congestionLevel: 5 },
+          pregnant: { car: 1, reason: "1번 칸 임산부 배려석이 역무원실 근처입니다.", tips: [], congestionLevel: 3 },
+        },
+      },
+      {
+        id: "sinbundang-yangjae",
+        name: "양재",
+        carStatuses: makeStatuses(6),
+        recommendations: {
+          quiet: { car: 1, reason: "1번 칸은 양재역 주요 출구에서 멀어 조용합니다.", tips: [], congestionLevel: 3 },
+          seats: { car: 6, reason: "6번 칸은 양재역에서 자리 여유가 있습니다.", tips: [], congestionLevel: 2 },
+          transfer: { car: 4, reason: "4번 칸이 3호선 환승 통로와 가장 가깝습니다.", tips: [], congestionLevel: 3 },
+          pregnant: { car: 6, reason: "6번 칸 임산부 배려석이 엘리베이터와 가깝습니다.", tips: [], congestionLevel: 2 },
+        },
+      },
+      {
+        id: "sinbundang-pangyo",
+        name: "판교",
+        carStatuses: makeStatuses(6),
+        recommendations: {
+          quiet: { car: 6, reason: "6번 칸은 판교역 테크노밸리 방면 출구에서 멀어 조용합니다.", tips: [], congestionLevel: 3 },
+          seats: { car: 1, reason: "1번 칸은 판교역에서 탑승객이 집중되지 않아 자리 여유가 있습니다.", tips: [], congestionLevel: 2 },
+          transfer: { car: 3, reason: "3번 칸이 경강선 환승 통로와 가장 가깝습니다.", tips: ["경강선 판교역으로 환승 시 개찰구를 다시 통과해야 합니다."], congestionLevel: 3 },
+          pregnant: { car: 1, reason: "1번 칸 임산부 배려석이 역무원실 근처입니다.", tips: [], congestionLevel: 2 },
+        },
+      },
+      {
+        id: "sinbundang-jeongja",
+        name: "정자",
+        carStatuses: makeStatuses(6),
+        recommendations: {
+          quiet: { car: 5, reason: "5번 칸은 정자역 신분당선 출구에서 멀어 조용합니다.", tips: [], congestionLevel: 2 },
+          seats: { car: 6, reason: "6번 칸은 정자역 신분당선에서 자리 여유가 있습니다.", tips: [], congestionLevel: 2 },
+          transfer: { car: 3, reason: "3번 칸이 수인분당선 환승 통로와 가장 가깝습니다.", tips: ["수인분당선은 별도 요금이 적용됩니다."], congestionLevel: 3 },
+          pregnant: { car: 6, reason: "6번 칸 임산부 배려석이 엘리베이터와 가깝습니다.", tips: [], congestionLevel: 2 },
+        },
+      },
+      {
+        id: "sinbundang-gwanggyo",
+        name: "광교",
+        carStatuses: makeStatuses(6),
+        recommendations: {
+          quiet: { car: 1, reason: "1번 칸은 광교 종착역으로 유동 인구가 적어 조용합니다.", tips: [], congestionLevel: 1 },
+          seats: { car: 6, reason: "6번 칸은 광교 종착역 특성상 빈 좌석이 많습니다.", tips: [], congestionLevel: 1 },
+          transfer: { car: 3, reason: "3번 칸이 버스 환승 센터 방면 출구와 가장 가깝습니다.", tips: [], congestionLevel: 2 },
+          pregnant: { car: 1, reason: "1번 칸 임산부 배려석이 역무원실 근처입니다.", tips: [], congestionLevel: 1 },
+        },
+      },
+    ],
+  },
 ];
 
 export function getRecommendedCar(
