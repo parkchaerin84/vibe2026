@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
   { href: "/", label: "칸 추천", icon: "🔍" },
+  { href: "/ai-predict", label: "AI 예측", icon: "🤖" },
   { href: "/share-seat", label: "하차 공유", icon: "📍" },
   { href: "/community", label: "민원 커뮤니티", icon: "📢" },
   { href: "/emergency", label: "긴급 신고", icon: "🚨" },
