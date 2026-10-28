@@ -1,36 +1,98 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+<div align="center">
+🚇 SubwayEasy : 내 상황에 맞는 지하철 칸을 찾는 웹서비스 프로토타입
+실제 지하철 이용 중 느낀 불편함에서 출발해, 아이디어와 기능을 직접 기획하고 Claude로 구현한 개인 프로젝트입니다.
+🌐 서비스 체험하기 >> https://subwayeasy.pages.dev/
+</div>
+프로젝트 상태: 프론트엔드 프로토타입
+실제 철도 운영기관과 연동된 서비스가 아닙니다. 일부 정보는 프로젝트 내 예시 데이터와 규칙 기반 계산 결과이며, 실시간 혼잡도·좌석 정보나 공식 신고 결과가 아닙니다.
+💡 기획 배경
+평소 지하철을 이용하며 겪었던 불편함을 해결하고 싶었습니다. 같은 열차라도 사람마다 원하는 탑승 환경은 다릅니다. 누군가는 조용한 칸을, 누군가는 좌석을 찾기 편한 칸을, 또 다른 누군가는 환승하기 편한 칸을 원합니다. 이런 차이를 반영해 이용자의 조건에 맞는 탑승 칸을 안내하는 서비스를 직접 구상했습니다. 처음부터 복잡한 시스템을 완성하기보다는, 실제로 화면에서 아이디어를 확인할 수 있는 프로토타입 제작을 목표로 했습니다.
+✨ 핵심 기능
+1. 맞춤형 탑승 칸 추천 — 핵심 기능
+노선과 출발역, 도착역 선택
+조용한 칸 / 좌석을 찾기 좋은 칸 / 환승이 편리한 칸 / 임산부 배려석과 가까운 칸 등의 조건 선택
+프로젝트에 정의된 데이터와 추천 로직을 바탕으로 칸 번호 및 추천 이유 표시
+자주 사용하는 구간은 브라우저 localStorage에 즐겨찾기 저장
 
-## Getting Started
+2. 혼잡도·착석 가능성 예측 시뮬레이션
+선택한 시간대와 구간을 바탕으로 혼잡도 변화 및 착석 가능성을 시각화
+실제 AI 모델의 추론 결과가 아닌 규칙 기반 계산을 사용
 
-First, run the development server:
+3. 하차 정보 공유 UI
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+하차 예정역과 탑승 칸 정보를 등록하고 목록으로 확인하는 흐름 구현
+현재 브라우저 화면 내 상태로 관리하며, 다른 사용자와 실시간으로 공유되지 않음
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+4. 민원 커뮤니티·긴급 신고 UI
+민원 게시글 및 답변 화면, 신고 유형·위치 입력 화면 구현
+예시 데이터 및 화면 상태를 이용한 데모로, 실제 기관에 민원·신고가 접수되지 않음
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+5. 칸 운영 상태 관리 UI
+칸별 용도를 선택·변경해 보는 운영자 화면 구현
+철도 운영 시스템이나 실제 직원 권한 체계와는 연결되지 않은 시뮬레이션
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+🖼️ 서비스 화면
+아래 위치에 직접 촬영한 화면 캡처를 추가하면 프로젝트를 더 쉽게 이해할 수 있습니다.
 
-## Learn More
+<!-- 권장: 저장소에 docs/images/ 폴더를 만들고 직접 캡처한 이미지를 업로드하세요.
+     예시: ![맞춤 칸 추천 화면](docs/images/recommendation.png)
+     예시: ![혼잡도 예측 시뮬레이션](docs/images/prediction.png)
+     예시: ![하차 정보 공유 화면](docs/images/seat-sharing.png)
+-->
 
-To learn more about Next.js, take a look at the following resources:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+🛠️ 사용 기술
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+프론트엔드 Next.js 15, React 19, TypeScript
+스타일 Tailwind CSS
+상태 관리  React useState 등
+브라우저 저장 localStorage (즐겨찾기)
+배포 Cloudflare Pages
+개발 보조 도구 Claude
+현재 별도의 백엔드 서버나 데이터베이스는 구현하지 않았습니다.
 
-## Deploy on Vercel
+📂 주요 코드 구조
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+app/
+  page.tsx                 # 맞춤형 칸 추천 및 즐겨찾기
+  ai-predict/page.tsx      # 혼잡도 예측 시뮬레이션
+  share-seat/page.tsx      # 하차 정보 공유 UI
+  community/page.tsx       # 민원 커뮤니티 UI
+  emergency/page.tsx       # 긴급 신고 UI
+  car-status/page.tsx      # 칸 운영 상태 관리 UI
+components/
+  Navbar.tsx               # 공통 탐색 메뉴
+  SubwayCarDiagram.tsx     # 지하철 칸 시각화
+data/
+  subwayData.ts            # 노선·역·추천용 예시 데이터
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+🤝 제작 방식과 나의 역할
+이 프로젝트는 기획을 직접 수행하고, 코드는 주로 Claude가 생성한 바이브 코딩 프로젝트입니다.
+직접 한 일: 지하철 이용 중 문제 발견, 서비스 아이디어 구상, 기능 및 화면 요구사항 정의, Claude에 구현 요청
+AI의 도움을 받은 일: React/Next.js 기반 프론트엔드 코드 생성 및 기능 구현
+현재 학습 과제: 생성된 코드의 구조와 동작 원리를 직접 분석하고, 작은 기능부터 스스로 수정·검증하는 경험 쌓기
+기여 범위를 과장하지 않고, 기획부터 구현까지 어떤 도구를 어떻게 활용했는지 투명하게 기록하고자 합니다.
+
+⚠️ 현재 한계
+정적 예시 데이터가 중심이므로 추천 결과의 실제 정확성은 검증되지 않았습니다.
+혼잡도 예측은 학습된 AI 모델이 아닌 규칙 기반 계산입니다.
+하차 정보 공유 및 커뮤니티는 서버 없이 화면 내에서 동작하는 프로토타입입니다.
+긴급 신고는 실제 신고 접수 기능이 아니므로 실제 위급 상황에서는 112 또는 119에 연락해야 합니다.
+관리자 화면은 실제 권한 인증이나 기관 연동이 없는 데모입니다.
+
+🗺️ 앞으로 개선하고 싶은 점
+코드 이해와 직접 수정: 컴포넌트, 상태 변화, 이벤트 처리 흐름을 학습하고 작은 기능을 직접 개선하기
+데이터 신뢰성 강화: 사용 가능한 공식 교통 API 및 공개 데이터 확인, 출처와 갱신 주기 표시
+풀스택으로 확장: 서버·DB를 연결해 사용자 간 공유 데이터 및 게시글을 저장·조회하는 기능 설계
+안전한 안내: 실제 기능과 데모를 명확하게 구분하고 오해를 부를 수 있는 문구 개선
+
+🌱 프로젝트를 통해 얻은 점
+
+아이디어를 실제로 접속 가능한 웹서비스로 만들어 보면서 문제를 발견하고 기능으로 구체화하는 과정의 재미를 느꼈습니다. 동시에 AI가 만든 결과물을 사용하는 것과 코드를 이해하고 직접 문제를 해결하는 것은 다르다는 점을 알게 되었습니다.
+앞으로 프론트엔드와 백엔드의 원리를 체계적으로 학습해, 기획에 그치지 않고 직접 구현과 개선까지 책임질 수 있는 개발자로 성장하고 싶습니다.
+
+<div align="center">
+
+SubwayEasy · 서비스 바로가기
+
+</div>
