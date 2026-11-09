@@ -1,506 +1,194 @@
 "use client";
 
-import { useState } from "react";
-import { SUBWAY_LINES } from "@/data/subwayData";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import Turnstile from "@/components/Turnstile";
+import PageHeader from "@/components/ui/PageHeader";
+import { ensureAnonymousAuthor } from "@/lib/supabase/anonymous";
+import { safeErrorMessage } from "@/lib/supabase/config";
+import type { SeatShareRow } from "@/lib/supabase/database";
+import { loadShareReference } from "@/lib/supabase/share-reference";
+import { reachableStations, routesForLine, stationsForRoute, type ShareLineKey, type ShareReference, type ShareRouteId } from "@/lib/transit/share-routes";
+import { deleteSeatShare, insertSeatShare, loadMyShareIds, loadSeatShares, unexpiredShares, validateShare } from "@/lib/supabase/seat-shares";
 
-interface SeatShare {
-  id: number;
-  user: string;
-  line: string;
-  lineColor: string;
-  station: string;
-  car: number;
-  seatNumber: string;
-  exitStation: string;
-  stopsUntilExit: number;
-  timeLeft: string;
-  isCurrentUser?: boolean;
-}
+import { ACTIVE_LINE_KEY, VISIBLE_LINES } from "@/lib/transit/service-scope";
 
-interface CarVacancySummary {
-  key: string;
-  line: string;
-  lineColor: string;
-  car: number;
-  count: number;
-  minStops: number;
-}
-
-const MOCK_SHARES: SeatShare[] = [
-  {
-    id: 1,
-    user: "승객A",
-    line: "2호선",
-    lineColor: "#00A84D",
-    station: "홍대입구",
-    car: 3,
-    seatNumber: "3-4",
-    exitStation: "강남",
-    stopsUntilExit: 1,
-    timeLeft: "약 18분 후",
-  },
-  {
-    id: 2,
-    user: "승객B",
-    line: "2호선",
-    lineColor: "#00A84D",
-    station: "신촌",
-    car: 3,
-    seatNumber: "3-2",
-    exitStation: "건대입구",
-    stopsUntilExit: 1,
-    timeLeft: "약 25분 후",
-  },
-  {
-    id: 3,
-    user: "승객C",
-    line: "5호선",
-    lineColor: "#996CAC",
-    station: "광화문",
-    car: 2,
-    seatNumber: "2-7",
-    exitStation: "왕십리",
-    stopsUntilExit: 2,
-    timeLeft: "약 12분 후",
-  },
-  {
-    id: 4,
-    user: "승객D",
-    line: "9호선",
-    lineColor: "#BDB092",
-    station: "여의도",
-    car: 4,
-    seatNumber: "4-1",
-    exitStation: "고속터미널",
-    stopsUntilExit: 3,
-    timeLeft: "약 20분 후",
-  },
-  {
-    id: 5,
-    user: "승객E",
-    line: "2호선",
-    lineColor: "#00A84D",
-    station: "신도림",
-    car: 3,
-    seatNumber: "3-6",
-    exitStation: "홍대입구",
-    stopsUntilExit: 1,
-    timeLeft: "약 8분 후",
-  },
-];
-
-function getVacancyStyle(count: number) {
-  if (count >= 3)
-    return {
-      dot: "🟢",
-      label: "자리 가능성 높음",
-      bg: "bg-green-50",
-      border: "border-green-300",
-      badge: "bg-green-100 text-green-700",
-      bar: "bg-green-400",
-    };
-  if (count === 2)
-    return {
-      dot: "🟡",
-      label: "자리 가능성 보통",
-      bg: "bg-yellow-50",
-      border: "border-yellow-300",
-      badge: "bg-yellow-100 text-yellow-700",
-      bar: "bg-yellow-400",
-    };
-  return {
-    dot: "🔴",
-    label: "자리 가능성 낮음",
-    bg: "bg-red-50",
-    border: "border-red-300",
-    badge: "bg-red-100 text-red-700",
-    bar: "bg-red-300",
-  };
-}
+const field = "ui-field";
 
 export default function ShareSeatPage() {
-  const [shares, setShares] = useState<SeatShare[]>(MOCK_SHARES);
+  const selectedLine = ACTIVE_LINE_KEY;
+  const [routeId, setRouteId] = useState<ShareRouteId>("line2-main");
+  const [reference, setReference] = useState<ShareReference | null>(null);
+  const [shares, setShares] = useState<SeatShareRow[]>([]);
+  const [mine, setMine] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [readError, setReadError] = useState("");
+  const [ownerError, setOwnerError] = useState("");
+  const [writeError, setWriteError] = useState("");
+  const [message, setMessage] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [formLine, setFormLine] = useState("");
-  const [formStation, setFormStation] = useState("");
-  const [formCar, setFormCar] = useState("");
-  const [formSeat, setFormSeat] = useState("");
-  const [formExit, setFormExit] = useState("");
-  const [formStops, setFormStops] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-  const [filterLine, setFilterLine] = useState("전체");
+  const [busy, setBusy] = useState(false);
+  const [current, setCurrent] = useState("");
+  const [exit, setExit] = useState("");
+  const [car, setCar] = useState("");
+  const [direction, setDirection] = useState("");
+  const [now, setNow] = useState(0);
+  const [token, setToken] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const lock = useRef(false);
+  const generation = useRef(0);
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim();
+  const draftForm = useRef<HTMLFormElement>(null);
+  useEffect(() => { if (showForm) draftForm.current?.querySelector<HTMLSelectElement>("select")?.focus(); }, [showForm]);
 
-  const selectedLineData = SUBWAY_LINES.find((l) => l.name === formLine);
+  const refresh = useCallback(async () => {
+    const request = ++generation.current;
+    const ownership = loadMyShareIds().then(ids => {
+      if (request === generation.current) { setMine(ids); setOwnerError(""); }
+    }).catch(error => {
+      if (request === generation.current) { setMine([]); setOwnerError(safeErrorMessage(error)); }
+    });
+    try {
+      const data = await loadShareReference(ACTIVE_LINE_KEY);
+      if (request !== generation.current) return;
+      const rows = await loadSeatShares(data.lineId);
+      if (request !== generation.current) return;
+      setReference(data); setShares(rows); setReadError(""); setNow(Date.now());
+    } catch (error) {
+      if (request === generation.current) { setReference(null); setShares([]); setReadError(safeErrorMessage(error)); }
+    } finally {
+      if (request === generation.current) setLoading(false);
+      await ownership;
+    }
+  }, []);
 
-  // 칸별 하차 예정 요약 계산
-  const vacancySummaries: CarVacancySummary[] = Object.values(
-    shares.reduce<Record<string, CarVacancySummary>>((acc, share) => {
-      const key = `${share.line}-${share.car}`;
-      if (!acc[key]) {
-        acc[key] = {
-          key,
-          line: share.line,
-          lineColor: share.lineColor,
-          car: share.car,
-          count: 0,
-          minStops: Infinity,
-        };
-      }
-      acc[key].count += 1;
-      if (share.stopsUntilExit < acc[key].minStops) {
-        acc[key].minStops = share.stopsUntilExit;
-      }
-      return acc;
-    }, {})
-  ).sort((a, b) => a.minStops - b.minStops || b.count - a.count);
-
-  const handleSubmit = () => {
-    if (!formLine || !formStation || !formCar || !formExit) return;
-    const lineData = SUBWAY_LINES.find((l) => l.name === formLine);
-    const newShare: SeatShare = {
-      id: Date.now(),
-      user: "나",
-      line: formLine,
-      lineColor: lineData?.color ?? "#666",
-      station: formStation,
-      car: Number(formCar),
-      seatNumber: formSeat || `${formCar}-?`,
-      exitStation: formExit,
-      stopsUntilExit: Number(formStops) || 1,
-      timeLeft: "방금 등록됨",
-      isCurrentUser: true,
+  useEffect(() => {
+    const requestState = generation;
+    const initial = window.setTimeout(() => void refresh(), 0);
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    const poll = window.setInterval(() => { if (!document.hidden && !lock.current) void refresh(); }, 30000);
+    const visible = () => { if (!document.hidden && !lock.current) void refresh(); };
+    window.addEventListener("focus", visible);
+    document.addEventListener("visibilitychange", visible);
+    return () => {
+      requestState.current++;
+      window.clearTimeout(initial);
+      window.clearInterval(timer); window.clearInterval(poll);
+      window.removeEventListener("focus", visible);
+      document.removeEventListener("visibilitychange", visible);
     };
-    setShares((prev) => [newShare, ...prev]);
-    setShowForm(false);
-    setSubmitted(true);
-    setFormLine("");
-    setFormStation("");
-    setFormCar("");
-    setFormSeat("");
-    setFormExit("");
-    setFormStops("");
-    setTimeout(() => setSubmitted(false), 4000);
-  };
+  }, [refresh]);
 
-  const handleDelete = (id: number) => {
-    setShares((prev) => prev.filter((s) => s.id !== id));
-  };
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!reference || lock.current) return;
+    lock.current = true; generation.current++; setBusy(true); setWriteError(""); setMessage("");
+    try {
+      const payload = validateShare({ line_id: reference.lineId, current_line_station_id: current,
+        exit_line_station_id: exit, car_number: Number(car), direction_label: direction }, reference);
+      await ensureAnonymousAuthor({ captchaToken: token ?? undefined });
+      const saved = await insertSeatShare(payload, reference);
+      setShares(previous => [saved, ...previous.filter(row => row.id !== saved.id)]);
+      setMine(previous => [...new Set([...previous, saved.id])]);
+      setNow(Date.now()); setShowForm(false); setCurrent(""); setExit(""); setCar(""); setDirection("");
+      setMessage("하차 정보가 저장되었습니다. 다른 사용자도 조회할 수 있으며 30분 후 만료됩니다.");
+    } catch (error) { setWriteError(safeErrorMessage(error)); }
+    finally {
+      setToken(null); setAttempt(value => value + 1);
+      await refresh(); setBusy(false); lock.current = false;
+    }
+  }
 
-  const allLines = ["전체", ...Array.from(new Set(shares.map((s) => s.line)))];
-  const filtered =
-    filterLine === "전체" ? shares : shares.filter((s) => s.line === filterLine);
+  async function remove(id: string) {
+    if (lock.current) return;
+    lock.current = true; generation.current++; setBusy(true); setWriteError(""); setMessage("");
+    try {
+      await deleteSeatShare(id);
+      setShares(previous => previous.filter(row => row.id !== id));
+      setMessage("하차 정보를 삭제했습니다.");
+    } catch (error) { setWriteError(safeErrorMessage(error)); }
+    finally { await refresh(); setBusy(false); lock.current = false; }
+  }
 
-  return (
-    <div className="space-y-6">
-      {/* Hero */}
-      <div className="bg-gradient-to-r from-purple-500 to-purple-700 rounded-2xl p-6 text-white">
-        <h1 className="text-2xl font-bold mb-1">하차 공유</h1>
-        <p className="text-purple-100 text-sm">
-          앉아 계신 분이 내리는 역을 공유하면, 서 있는 분이 미리 자리를 잡을 수 있어요.
-        </p>
+  function resetDraft() {
+    setCurrent(""); setExit(""); setCar(""); setDirection("");
+    setWriteError(""); setMessage(""); setToken(null); setAttempt(value => value + 1);
+  }
+
+  function changeLine(value: string) {
+    if (lock.current || !VISIBLE_LINES.some(line => line.key === value)) return;
+    const key = value as ShareLineKey;
+    generation.current++; // Immediately invalidate results from the previous line.
+    setRouteId(routesForLine(key)[0].id);
+    setReference(null); setShares([]); setMine([]); setLoading(true); setReadError("");
+    resetDraft();
+  }
+
+  const routes = routesForLine(selectedLine);
+  const route = routes.find(item => item.id === routeId) ?? routes[0];
+  const routeStations = reference ? stationsForRoute(reference, route) : [];
+  const reachable = reference ? reachableStations(reference, route, current, direction) : [];
+  const reachableIds = new Set(reachable.map(s => s.membershipId));
+  const routeMemberIds = new Set(routeStations.map(s => s.membershipId));
+  const visibleShares = unexpiredShares(shares, now).filter(share => share.line_id === reference?.lineId &&
+    routeMemberIds.has(share.current_line_station_id) && routeMemberIds.has(share.exit_line_station_id) &&
+    route.directions.some(d => d === share.direction_label));
+  const stationName = (id: string) => reference?.stations.find(s => s.membershipId === id)?.name ?? "확인되지 않은 역";
+  const canWrite = !loading && !readError && !!reference && reference.lineKey === selectedLine;
+
+  return <div className="space-y-6">
+    <PageHeader title="하차 정보 공유" description="내리는 역을 나누고, 같은 구간을 이용하는 승객의 이야기를 확인하세요." icon="share" eyebrow="SHARE YOUR STOP" line />
+    <section className="ui-card space-y-3">
+      <h2 className="font-bold text-gray-800">승객이 직접 나누는 하차 예정 정보</h2>
+      <p className="ui-note">실제 빈 좌석을 보장하지 않습니다. 각 제보는 별도 정보이며, 같은 칸 번호라도 같은 열차라는 뜻은 아닙니다.</p>
+      <div className="flex flex-wrap gap-2 text-xs font-semibold text-brand-ink"><span className="bg-brand-soft rounded-full px-3 py-1.5">등록 후 30분간 공개</span><span className="bg-[#EDF7FC] text-[#315C74] rounded-full px-3 py-1.5">본선·지선 51개 역</span></div>
+      <details className="text-xs text-ink-muted"><summary className="py-2 font-semibold">공유 정보 이용 안내</summary><p className="mt-2">등록 당시의 위치이며 실시간 열차 위치가 아닙니다. 로그인 화면 없이 한 번에 한 건을 공유할 수 있습니다. 브라우저 데이터를 지우거나 기기를 바꾸면 본인 정보의 삭제 권한을 잃을 수 있습니다.</p></details>
+    </section>
+    <section className="ui-card space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <label className="text-xs font-semibold text-gray-500">노선<select className={field} value={selectedLine} disabled={busy} onChange={e => changeLine(e.target.value)}>{VISIBLE_LINES.map(line => <option key={line.key} value={line.key}>{line.name}</option>)}</select></label>
+        <label className="text-xs font-semibold text-gray-500">운행 구간<select className={field} value={route.id} disabled={busy} onChange={e => { setRouteId(e.target.value as ShareRouteId); resetDraft(); }}>{routes.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
       </div>
-
-      {/* 곧 자리 남아요 */}
-      <section className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-        <div className="flex items-center justify-between mb-1">
-          <h2 className="font-bold text-gray-800 flex items-center gap-2">
-            <span>🪑</span> 곧 자리 남아요
-          </h2>
-          <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-            실시간 승객 공유 기반
-          </span>
-        </div>
-        <p className="text-xs text-gray-500 mb-4">
-          하차 예정 승객이 공유한 칸 정보입니다. 해당 칸 앞에서 미리 대기하세요.
-        </p>
-
-        {vacancySummaries.length === 0 ? (
-          <div className="text-center py-8 text-gray-400">
-            <p className="text-3xl mb-2">🪑</p>
-            <p className="text-sm">현재 공유된 자리 정보가 없습니다.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {vacancySummaries.map((v) => {
-              const style = getVacancyStyle(v.count);
-              return (
-                <div
-                  key={v.key}
-                  className={`rounded-xl p-4 border ${style.bg} ${style.border}`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">{style.dot}</span>
-                      <span
-                        className="text-xs font-bold px-2 py-0.5 rounded-full text-white"
-                        style={{ backgroundColor: v.lineColor }}
-                      >
-                        {v.line}
-                      </span>
-                      <span className="font-black text-gray-800 text-lg">{v.car}번 칸</span>
-                    </div>
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${style.badge}`}>
-                      {style.label}
-                    </span>
-                  </div>
-
-                  <p className="text-sm text-gray-700 mb-3">
-                    {v.minStops === 1 ? "다음 역" : `${v.minStops}정거장 후`} 하차 예정{" "}
-                    <span className="font-bold">{v.count}명</span>
-                  </p>
-
-                  {/* 인원 바 */}
-                  <div className="flex gap-1">
-                    {Array.from({ length: Math.min(v.count, 5) }, (_, i) => (
-                      <div key={i} className={`h-2 flex-1 rounded-full ${style.bar}`} />
-                    ))}
-                    {v.count < 5 &&
-                      Array.from({ length: 5 - v.count }, (_, i) => (
-                        <div key={i} className="h-2 flex-1 rounded-full bg-gray-200" />
-                      ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      {/* 이용 방법 */}
-      <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-        <h2 className="font-bold text-gray-800 mb-3">이용 방법</h2>
-        <div className="grid grid-cols-3 gap-3 text-center">
-          {[
-            { icon: "💺", text: "좌석에 앉은 후\n내리는 역 입력" },
-            { icon: "📱", text: "앱 사용자에게\n내 위치 공유됨" },
-            { icon: "🧍", text: "다른 사용자가\n내 앞에서 대기" },
-          ].map((item, i) => (
-            <div key={i} className="flex flex-col items-center gap-2 p-3 bg-purple-50 rounded-xl">
-              <span className="text-2xl">{item.icon}</span>
-              <p className="text-xs text-gray-600 whitespace-pre-line leading-relaxed">{item.text}</p>
-            </div>
-          ))}
-        </div>
+      <p className="text-xs text-gray-500">선택한 노선·구간의 제보만 표시합니다. 지선은 본선과 구분하며, 환승이 필요한 이동은 구간별로 등록해 주세요.</p>
+      {selectedLine === "line2" && <p className="text-xs text-gray-500">본선은 내선(시계방향)·외선(반시계방향)으로 한 바퀴 이내의 연결을 검사합니다. 실제 열차의 종착역·운행 변경이나 최단 경로를 보장하지 않습니다.</p>}
+    </section>
+    {!showForm && <button onClick={() => { setShowForm(true); setWriteError(""); }} disabled={!canWrite || busy}
+      className="ui-primary w-full">+ 내 하차역 공유하기</button>}
+    {message && <p role="status" className="bg-green-50 border border-green-200 text-green-700 rounded-xl p-3 text-sm">{message}</p>}
+    {writeError && <p role="alert" className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm">{writeError}</p>}
+    {ownerError && <p role="alert" className="text-sm text-amber-700">{ownerError}</p>}
+    {showForm && <form ref={draftForm} onSubmit={submit} className="ui-card space-y-4">
+      <h2 className="font-bold text-gray-800">하차 정보 입력</h2>
+      <fieldset disabled={busy || !canWrite} className="grid grid-cols-2 gap-3">
+        <p className="col-span-2 text-xs text-brand-ink">{reference?.lineName} · {route.name}</p>
+        <label className="text-xs font-semibold text-gray-500">현재 역<select required className={field} value={current} onChange={e => { setCurrent(e.target.value); setExit(""); }}><option value="">선택</option>{routeStations.map(s => <option key={s.membershipId} value={s.membershipId}>{s.name}</option>)}</select></label>
+        <label className="text-xs font-semibold text-gray-500">탑승 칸<input required className={field} type="number" min={1} max={20} step={1} placeholder="탑승한 칸 번호" value={car} onChange={e => setCar(e.target.value)} /></label>
+        <label className="text-xs font-semibold text-gray-500">방향<select required className={field} value={direction} onChange={e => { setDirection(e.target.value); setExit(""); }}><option value="">선택</option>{route.directions.map(d => <option key={d}>{d}</option>)}</select></label>
+        <label className="text-xs font-semibold text-gray-500 col-span-2">하차 예정 역<select required className={field} value={exit} onChange={e => setExit(e.target.value)}><option value="">선택</option>{routeStations.map(s => <option key={s.membershipId} value={s.membershipId} disabled={!reachableIds.has(s.membershipId)}>{s.name}</option>)}</select></label>
+      </fieldset>
+      <p className="text-xs text-gray-500">현재 역과 방향을 선택하면 도달 가능한 하차 역을 선택할 수 있습니다.{reachable[0] ? ` 선택 방향의 다음 역: ${reachable[0].name}.` : ""} 종착역에서 바깥쪽으로 가는 방향은 등록할 수 없습니다.</p>
+      {siteKey && <Turnstile siteKey={siteKey} attempt={attempt} onToken={setToken} onError={() => setWriteError("봇 방지 확인에 실패했습니다. 다시 확인해 주세요.")} />}
+      <div className="flex gap-2">
+        <button type="button" disabled={busy} onClick={() => setShowForm(false)} className="ui-secondary flex-1">취소</button>
+        <button disabled={busy || !canWrite || (!!siteKey && !token)} className="ui-primary flex-1">{busy ? "저장 중…" : "공유하기"}</button>
       </div>
-
-      {/* 공유 버튼 */}
-      {!showForm && (
-        <button
-          onClick={() => setShowForm(true)}
-          className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl shadow-md transition-all"
-        >
-          + 내 하차역 공유하기
-        </button>
-      )}
-
-      {submitted && (
-        <div className="bg-green-50 border border-green-200 text-green-700 rounded-xl p-3 text-sm font-medium text-center">
-          ✓ 하차역이 공유되었습니다! 다른 사용자들이 볼 수 있어요.
-        </div>
-      )}
-
-      {/* 등록 폼 */}
-      {showForm && (
-        <section className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 space-y-4">
-          <h2 className="font-bold text-gray-800">하차 정보 입력</h2>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-semibold text-gray-500 mb-1 block">노선</label>
-              <select
-                value={formLine}
-                onChange={(e) => { setFormLine(e.target.value); setFormStation(""); }}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-              >
-                <option value="">선택</option>
-                {SUBWAY_LINES.map((l) => (
-                  <option key={l.id} value={l.name}>{l.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-gray-500 mb-1 block">현재 탑승 역</label>
-              <select
-                value={formStation}
-                onChange={(e) => setFormStation(e.target.value)}
-                disabled={!formLine}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 disabled:bg-gray-50"
-              >
-                <option value="">선택</option>
-                {selectedLineData?.stations.map((s) => (
-                  <option key={s.id} value={s.name}>{s.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-gray-500 mb-1 block">탑승 칸</label>
-              <select
-                value={formCar}
-                onChange={(e) => setFormCar(e.target.value)}
-                disabled={!formLine}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 disabled:bg-gray-50"
-              >
-                <option value="">선택</option>
-                {selectedLineData &&
-                  Array.from({ length: selectedLineData.totalCars }, (_, i) => (
-                    <option key={i + 1} value={i + 1}>{i + 1}번 칸</option>
-                  ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-gray-500 mb-1 block">좌석 번호 (선택)</label>
-              <input
-                type="text"
-                placeholder="예: 3-4"
-                value={formSeat}
-                onChange={(e) => setFormSeat(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-semibold text-gray-500 mb-1 block">내리는 역</label>
-              <select
-                value={formExit}
-                onChange={(e) => setFormExit(e.target.value)}
-                disabled={!formLine}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 disabled:bg-gray-50"
-              >
-                <option value="">선택</option>
-                {selectedLineData?.stations.map((s) => (
-                  <option key={s.id} value={s.name}>{s.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-gray-500 mb-1 block">몇 정거장 후 하차</label>
-              <select
-                value={formStops}
-                onChange={(e) => setFormStops(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-              >
-                <option value="">선택</option>
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <option key={n} value={n}>{n}정거장 후</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowForm(false)}
-              className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-medium rounded-xl hover:bg-gray-50 transition-all"
-            >
-              취소
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={!formLine || !formStation || !formCar || !formExit}
-              className="flex-1 py-2.5 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 disabled:bg-gray-200 disabled:text-gray-400 transition-all"
-            >
-              공유하기
-            </button>
-          </div>
-        </section>
-      )}
-
-      {/* 필터 */}
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {allLines.map((line) => (
-          <button
-            key={line}
-            onClick={() => setFilterLine(line)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-all
-              ${filterLine === line
-                ? "bg-purple-600 text-white border-transparent"
-                : "bg-white border-gray-200 text-gray-600 hover:border-purple-300"
-              }`}
-          >
-            {line}
-          </button>
-        ))}
+    </form>}
+    <section className="space-y-3" aria-busy={loading}>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="font-bold text-gray-800">공유된 하차 정보 {!loading && !readError && `(${visibleShares.length}건)`}</h2>
+        <button disabled={loading || busy} onClick={() => { setLoading(true); void refresh(); }} className="text-sm text-brand-ink disabled:text-gray-400">새로고침</button>
       </div>
-
-      {/* 공유 목록 */}
-      <section className="space-y-3">
-        <h2 className="font-bold text-gray-800 flex items-center gap-2">
-          <span className="text-purple-600">📍</span>
-          현재 공유 중인 자리 ({filtered.length}개)
-        </h2>
-
-        {filtered.length === 0 && (
-          <div className="text-center py-12 text-gray-400">
-            <p className="text-3xl mb-2">🪑</p>
-            <p className="text-sm">공유된 자리가 없습니다.</p>
+      <p className="text-xs text-gray-500">30초마다 목록을 갱신합니다. 남은 시간은 공유 정보의 유효시간이며 도착 예상시간이 아닙니다.</p>
+      {loading ? <p role="status" className="text-sm text-gray-500 py-8 text-center">하차 정보를 불러오는 중입니다…</p>
+        : readError ? <p role="alert" className="text-sm text-red-700 bg-red-50 p-4 rounded-xl">{readError}</p>
+        : visibleShares.length === 0 ? <div className="ui-empty"><p className="font-semibold mb-2">아직 공유된 하차 정보가 없습니다</p><p className="text-sm">내리는 역을 공유해 첫 번째 제보를 남겨보세요.</p></div>
+        : visibleShares.map(share => <article key={share.id} className={`bg-white rounded-xl p-4 shadow-sm border ${mine.includes(share.id) ? "border-pink-300" : "border-gray-100"}`}>
+          <div className="flex items-start justify-between gap-2 mb-3">
+            <div className="flex flex-wrap items-center gap-2"><span className="line-badge"><i aria-hidden="true" />{reference?.lineName} · {route.name}</span><span className="text-xs text-gray-500">등록 당시 {stationName(share.current_line_station_id)}</span>{mine.includes(share.id) && <span className="text-xs text-brand-ink">내 제보</span>}</div>
+            {mine.includes(share.id) && <button disabled={busy} onClick={() => void remove(share.id)} className="text-xs text-red-700 disabled:text-gray-400" aria-label="내 하차 정보 삭제">삭제</button>}
           </div>
-        )}
-
-        {filtered.map((share) => (
-          <div
-            key={share.id}
-            className={`bg-white rounded-xl p-4 shadow-sm border transition-all
-              ${share.isCurrentUser ? "border-purple-300 bg-purple-50" : "border-gray-100"}`}
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-2 mb-2">
-                <span
-                  className="text-xs font-bold px-2 py-0.5 rounded-full text-white"
-                  style={{ backgroundColor: share.lineColor }}
-                >
-                  {share.line}
-                </span>
-                <span className="text-xs text-gray-500">{share.station}역 탑승</span>
-                {share.isCurrentUser && (
-                  <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">나</span>
-                )}
-              </div>
-              {share.isCurrentUser && (
-                <button
-                  onClick={() => handleDelete(share.id)}
-                  className="text-xs text-red-400 hover:text-red-600 transition-colors"
-                >
-                  삭제
-                </button>
-              )}
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="text-center">
-                <p className="text-xs text-gray-400">탑승 칸</p>
-                <p className="text-xl font-black text-gray-800">{share.car}번</p>
-              </div>
-              {share.seatNumber && (
-                <div className="text-center">
-                  <p className="text-xs text-gray-400">좌석</p>
-                  <p className="text-sm font-semibold text-gray-700">{share.seatNumber}</p>
-                </div>
-              )}
-              <div className="text-center">
-                <p className="text-xs text-gray-400">하차까지</p>
-                <p className="text-sm font-semibold text-gray-700">{share.stopsUntilExit}정거장</p>
-              </div>
-              <div className="flex-1 flex items-center gap-2">
-                <span className="text-gray-300">→</span>
-                <div>
-                  <p className="text-xs text-gray-400">내리는 역</p>
-                  <p className="text-base font-bold text-purple-700">{share.exitStation}역</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-gray-400">예상</p>
-                <p className="text-xs font-medium text-gray-600">{share.timeLeft}</p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </section>
-    </div>
-  );
+          <div className="flex flex-wrap items-center gap-4"><div><p className="text-xs text-gray-400">탑승 칸</p><p className="text-xl font-black text-gray-800">{share.car_number}번</p></div><div><p className="text-xs text-gray-400">방향</p><p className="text-sm text-gray-700">{share.direction_label}</p></div><span className="text-gray-300">→</span><div><p className="text-xs text-gray-400">하차 예정 역</p><p className="font-bold text-brand-ink">{stationName(share.exit_line_station_id)}</p></div></div>
+          <p className="text-xs text-gray-500 mt-3">등록 {new Date(share.created_at).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })} · 공유 유효시간 약 {Math.ceil((Date.parse(share.expires_at) - now) / 60000)}분 남음</p>
+        </article>)}
+    </section>
+  </div>;
 }

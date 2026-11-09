@@ -1,0 +1,523 @@
+{
+  "source": "https://www.data.go.kr/data/15143841/openapi.do",
+  "checkedAt": "2026-11-09T04:09:17.079Z",
+  "requestScope": "lineNm=2호선; all pages complete",
+  "http": 200,
+  "apiCode": "00",
+  "totalRows": 57,
+  "stations": [
+    {
+      "code": "0201",
+      "name": "시청",
+      "branch": "main",
+      "status": "verified",
+      "count": 2,
+      "referenceDates": [
+        "20240701",
+        "20210527"
+      ]
+    },
+    {
+      "code": "0202",
+      "name": "을지로입구",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0203",
+      "name": "을지로3가",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0204",
+      "name": "을지로4가",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0205",
+      "name": "동대문역사문화공원",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0206",
+      "name": "신당",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0207",
+      "name": "상왕십리",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0208",
+      "name": "왕십리",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0209",
+      "name": "한양대",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0210",
+      "name": "뚝섬",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0211",
+      "name": "성수",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0212",
+      "name": "건대입구",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0213",
+      "name": "구의",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0214",
+      "name": "강변",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0215",
+      "name": "잠실나루",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0216",
+      "name": "잠실",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0217",
+      "name": "잠실새내",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0218",
+      "name": "종합운동장",
+      "branch": "main",
+      "status": "verified",
+      "count": 2,
+      "referenceDates": [
+        "20210527",
+        "20240701"
+      ]
+    },
+    {
+      "code": "0219",
+      "name": "삼성",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0220",
+      "name": "선릉",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0221",
+      "name": "역삼",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0222",
+      "name": "강남",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0223",
+      "name": "교대",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0224",
+      "name": "서초",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0225",
+      "name": "방배",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0226",
+      "name": "사당",
+      "branch": "main",
+      "status": "verified",
+      "count": 2,
+      "referenceDates": [
+        "20210527",
+        "20240701"
+      ]
+    },
+    {
+      "code": "0227",
+      "name": "낙성대",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0228",
+      "name": "서울대입구",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0229",
+      "name": "봉천",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0230",
+      "name": "신림",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0231",
+      "name": "신대방",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0232",
+      "name": "구로디지털단지",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0233",
+      "name": "대림",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0234",
+      "name": "신도림",
+      "branch": "main",
+      "status": "verified",
+      "count": 2,
+      "referenceDates": [
+        "20210527",
+        "20240701"
+      ]
+    },
+    {
+      "code": "0235",
+      "name": "문래",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0236",
+      "name": "영등포구청",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0237",
+      "name": "당산",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0238",
+      "name": "합정",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0239",
+      "name": "홍대입구",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0240",
+      "name": "신촌",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0241",
+      "name": "이대",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0242",
+      "name": "아현",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0243",
+      "name": "충정로",
+      "branch": "main",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0244",
+      "name": "용답",
+      "branch": "seongsu",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0245",
+      "name": "신답",
+      "branch": "seongsu",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0250",
+      "name": "용두",
+      "branch": "seongsu",
+      "status": "verified",
+      "count": 4,
+      "referenceDates": [
+        "20210527",
+        "20240701"
+      ]
+    },
+    {
+      "code": "0246",
+      "name": "신설동",
+      "branch": "seongsu",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0247",
+      "name": "도림천",
+      "branch": "sinjeong",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0248",
+      "name": "양천구청",
+      "branch": "sinjeong",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0249",
+      "name": "신정네거리",
+      "branch": "sinjeong",
+      "status": "verified",
+      "count": 1,
+      "referenceDates": [
+        "20210527"
+      ]
+    },
+    {
+      "code": "0200",
+      "name": "까치산",
+      "branch": "sinjeong",
+      "status": "empty",
+      "count": 0,
+      "referenceDates": []
+    }
+  ]
+}

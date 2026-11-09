@@ -1,419 +1,272 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import PostForm, { communityField } from "@/components/community/PostForm";
+import Turnstile from "@/components/Turnstile";
+import PageHeader from "@/components/ui/PageHeader";
+import Icon, { type IconName } from "@/components/ui/Icon";
+import { ensureAnonymousAuthor } from "@/lib/supabase/anonymous";
+import { ConnectionError, safeErrorMessage } from "@/lib/supabase/config";
+import { CATEGORIES, createComment, createPost, deleteComment, deletePost, loadComments, loadMyCommunityIds, loadPost, loadPosts, updateComment, updatePost, validatePost, type OwnedCommunityIds } from "@/lib/supabase/community";
+import type { CommentRow, PostInsert, PostRow } from "@/lib/supabase/database";
+import { loadShareReference } from "@/lib/supabase/share-reference";
+import { type ShareReference } from "@/lib/transit/share-routes";
 
-type Category = "혼잡" | "시설" | "안전" | "서비스" | "기타";
-type Status = "접수됨" | "검토중" | "처리완료" | "답변완료";
+import { ACTIVE_LINE_KEY, VISIBLE_LINES } from "@/lib/transit/service-scope";
 
-interface Reply {
-  author: string;
-  content: string;
-  date: string;
-  isStaff: boolean;
-}
-
-interface Post {
-  id: number;
-  title: string;
-  content: string;
-  category: Category;
-  line: string;
-  station: string;
-  author: string;
-  date: string;
-  status: Status;
-  views: number;
-  replies: Reply[];
-  isCurrentUser?: boolean;
-}
-
-const MOCK_POSTS: Post[] = [
-  {
-    id: 1,
-    title: "2호선 강남역 환승 칸 혼잡도가 너무 심합니다",
-    content: "출퇴근 시간에 5번 칸 환승 통로 앞이 너무 혼잡해서 부상 위험이 있을 것 같습니다. 혼잡도 분산 방안을 마련해 주시면 좋겠습니다.",
-    category: "혼잡",
-    line: "2호선",
-    station: "강남",
-    author: "지하철유저123",
-    date: "2026-04-30",
-    status: "답변완료",
-    views: 342,
-    replies: [
-      {
-        author: "코레일 고객센터",
-        content: "안녕하세요. 강남역 환승 혼잡 문제를 인지하고 있습니다. 5번 칸 부근 안내 직원을 오전 7~9시 추가 배치하겠습니다. 불편을 드려 죄송합니다.",
-        date: "2026-05-01",
-        isStaff: true,
-      },
-    ],
-  },
-  {
-    id: 2,
-    title: "왕십리역 임산부 배려석 표시가 잘 안 보여요",
-    content: "임산부 배려석(분홍 좌석) 안내판이 오래되어 색이 바랬습니다. 새로 교체해 주시면 감사하겠습니다.",
-    category: "시설",
-    line: "5호선",
-    station: "왕십리",
-    author: "배려씩씩",
-    date: "2026-05-01",
-    status: "검토중",
-    views: 128,
-    replies: [],
-  },
-  {
-    id: 3,
-    title: "9호선 급행 혼잡도 개선 건의",
-    content: "여의도역 급행 탑승 시 칸마다 혼잡도 차이가 매우 큽니다. 앞 칸에 몰리는 현상을 개선해 주세요.",
-    category: "혼잡",
-    line: "9호선",
-    station: "여의도",
-    author: "급행러버",
-    date: "2026-05-02",
-    status: "접수됨",
-    views: 67,
-    replies: [],
-  },
-  {
-    id: 4,
-    title: "도봉산역 등산객 대응 추가 안내 요청",
-    content: "주말 이른 아침 도봉산역에 등산객이 몰려 혼잡합니다. 전동차 내 위치 안내 방송을 강화해 주시면 좋겠습니다.",
-    category: "서비스",
-    line: "7호선",
-    station: "도봉산",
-    author: "등산매니아",
-    date: "2026-05-02",
-    status: "처리완료",
-    views: 205,
-    replies: [
-      {
-        author: "코레일 운영팀",
-        content: "주말 도봉산 방면 분산 승차 안내 방송을 강화하겠습니다. 좋은 의견 감사합니다.",
-        date: "2026-05-03",
-        isStaff: true,
-      },
-    ],
-  },
-];
-
-const STATUS_STYLES: Record<Status, string> = {
-  접수됨: "bg-gray-100 text-gray-600",
-  검토중: "bg-blue-100 text-blue-600",
-  처리완료: "bg-green-100 text-green-600",
-  답변완료: "bg-purple-100 text-purple-600",
-};
-
-const CATEGORY_ICONS: Record<Category, string> = {
-  혼잡: "🚶",
-  시설: "🔧",
-  안전: "⚠️",
-  서비스: "💬",
-  기타: "📝",
-};
+const icons: Record<string, IconName> = { 혼잡: "train", 시설: "facilities", 안전: "shield", 서비스: "community", 기타: "share" };
+const date = (value: string) => new Date(value).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+const button = "ui-secondary";
 
 export default function CommunityPage() {
-  const [posts, setPosts] = useState<Post[]>(MOCK_POSTS);
-  const [isStaffView, setIsStaffView] = useState(false);
-  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-  const [showNewForm, setShowNewForm] = useState(false);
-  const [replyText, setReplyText] = useState("");
-  const [filterCategory, setFilterCategory] = useState<"전체" | Category>("전체");
+  const [references, setReferences] = useState<ShareReference[]>([]);
+  const [referenceError, setReferenceError] = useState("");
+  const [referenceLoading, setReferenceLoading] = useState(true);
+  const [posts, setPosts] = useState<PostRow[]>([]);
+  const [listLoading, setListLoading] = useState(true);
+  const [listError, setListError] = useState("");
+  const [page, setPage] = useState(0);
+  const [hasNext, setHasNext] = useState(false);
+  const [category, setCategory] = useState("");
+  const [line, setLine] = useState("");
+  const [station, setStation] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [post, setPost] = useState<PostRow | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState("");
+  const [comments, setComments] = useState<CommentRow[]>([]);
+  const [commentError, setCommentError] = useState("");
+  const [commentPage, setCommentPage] = useState(0);
+  const [commentsNext, setCommentsNext] = useState(false);
+  const [mine, setMine] = useState<OwnedCommunityIds>({ posts: [], comments: [] });
+  const [ownerError, setOwnerError] = useState("");
+  const [version, setVersion] = useState(0);
+  const [showForm, setShowForm] = useState(false);
+  const [editingPost, setEditingPost] = useState(false);
+  const [editingComment, setEditingComment] = useState<CommentRow | null>(null);
+  const [reply, setReply] = useState("");
+  const [editedReply, setEditedReply] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [writeError, setWriteError] = useState("");
+  const [message, setMessage] = useState("");
+  const [token, setToken] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const lock = useRef(false);
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim();
 
-  // New post form state
-  const [newTitle, setNewTitle] = useState("");
-  const [newContent, setNewContent] = useState("");
-  const [newCategory, setNewCategory] = useState<Category>("혼잡");
-  const [newLine, setNewLine] = useState("");
-  const [newStation, setNewStation] = useState("");
-  const [submitSuccess, setSubmitSuccess] = useState(false);
+  useEffect(() => {
+    let active = true;
+    Promise.allSettled(VISIBLE_LINES.map(item => loadShareReference(item.key))).then(results => {
+      if (!active) return;
+      const ready: ShareReference[] = [];
+      const errors: string[] = [];
+      results.forEach((result, index) => {
+        if (result.status === "fulfilled") ready.push(result.value);
+        else errors.push(`${VISIBLE_LINES[index].name}: ${safeErrorMessage(result.reason)}`);
+      });
+      setReferences(ready); setReferenceError(errors.join(" ")); setReferenceLoading(false);
+    });
+    return () => { active = false; };
+  }, [version]);
 
-  const handleNewPost = () => {
-    if (!newTitle.trim() || !newContent.trim()) return;
-    const post: Post = {
-      id: Date.now(),
-      title: newTitle,
-      content: newContent,
-      category: newCategory,
-      line: newLine || "미지정",
-      station: newStation || "미지정",
-      author: "나",
-      date: new Date().toISOString().slice(0, 10),
-      status: "접수됨",
-      views: 1,
-      replies: [],
-      isCurrentUser: true,
-    };
-    setPosts((prev) => [post, ...prev]);
-    setShowNewForm(false);
-    setSubmitSuccess(true);
-    setNewTitle("");
-    setNewContent("");
-    setNewLine("");
-    setNewStation("");
-    setTimeout(() => setSubmitSuccess(false), 4000);
-  };
+  const activeLineId = references.find(item => item.lineKey === ACTIVE_LINE_KEY)?.lineId ?? "";
 
-  const handleReply = () => {
-    if (!replyText.trim() || !selectedPost) return;
-    const reply: Reply = {
-      author: isStaffView ? "코레일 운영팀" : "나",
-      content: replyText,
-      date: new Date().toISOString().slice(0, 10),
-      isStaff: isStaffView,
-    };
-    const newStatus: Status = isStaffView ? "답변완료" : selectedPost.status;
-    setPosts((prev) =>
-      prev.map((p) =>
-        p.id === selectedPost.id
-          ? { ...p, replies: [...p.replies, reply], status: newStatus }
-          : p
-      )
-    );
-    setSelectedPost((prev) =>
-      prev ? { ...prev, replies: [...prev.replies, reply], status: newStatus } : null
-    );
-    setReplyText("");
-  };
+  useEffect(() => {
+    let active = true;
+    const timer = window.setTimeout(() => {
+      setListLoading(true);
+      if (!activeLineId) { setPosts([]); setHasNext(false); setListLoading(false); return; }
+      loadPosts({ category, lineId: activeLineId, membershipId: station }, page).then(result => {
+        if (active) { setPosts(result.rows.filter(item => item.line_id === activeLineId)); setHasNext(result.hasNext); setListError(""); }
+      }).catch(error => {
+        if (active) { setPosts([]); setHasNext(false); setListError(safeErrorMessage(error)); }
+      }).finally(() => { if (active) setListLoading(false); });
+    }, 0);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [category, activeLineId, station, page, version]);
 
-  const CATEGORIES: ("전체" | Category)[] = ["전체", "혼잡", "시설", "안전", "서비스", "기타"];
-  const filtered =
-    filterCategory === "전체" ? posts : posts.filter((p) => p.category === filterCategory);
+  useEffect(() => {
+    let active = true;
+    loadMyCommunityIds().then(ids => {
+      if (active) { setMine(ids); setOwnerError(""); }
+    }).catch(error => {
+      if (active) { setMine({ posts: [], comments: [] }); setOwnerError(safeErrorMessage(error)); }
+    });
+    return () => { active = false; };
+  }, [version, selectedId]);
 
-  return (
-    <div className="space-y-6">
-      <div className="bg-gradient-to-r from-red-500 to-red-700 rounded-2xl p-6 text-white">
-        <h1 className="text-2xl font-bold mb-1">민원 커뮤니티</h1>
-        <p className="text-red-100 text-sm">
-          불편사항을 공유하고 코레일 직원이 직접 답변드립니다.
-        </p>
+  useEffect(() => {
+    if (!selectedId || !activeLineId) return;
+    let active = true;
+    const timer = window.setTimeout(async () => {
+      setDetailLoading(true);
+      try {
+        const loaded = await loadPost(selectedId);
+        const result = loaded?.line_id === activeLineId ? loaded : null;
+        if (!active) return;
+        setPost(result); setDetailError("");
+        if (!result) { setComments([]); setCommentError(""); return; }
+        try {
+          const replies = await loadComments(selectedId, commentPage);
+          if (active) { setComments(replies.rows); setCommentsNext(replies.hasNext); setCommentError(""); }
+        } catch (error) {
+          if (active) { setComments([]); setCommentsNext(false); setCommentError(safeErrorMessage(error)); }
+        }
+      } catch (error) {
+        if (active) { setPost(null); setComments([]); setDetailError(safeErrorMessage(error)); }
+      } finally { if (active) setDetailLoading(false); }
+    }, 0);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [selectedId, activeLineId, commentPage, version]);
+
+  function refresh() {
+    setListLoading(true);
+    if (selectedId) setDetailLoading(true);
+    setVersion(value => value + 1);
+  }
+
+  async function mutate(action: () => Promise<void>) {
+    if (lock.current) return;
+    lock.current = true; setBusy(true); setWriteError(""); setMessage("");
+    let saved = false;
+    try { await action(); saved = true; }
+    catch (error) { setWriteError(safeErrorMessage(error)); }
+    finally {
+      setToken(null); setAttempt(value => value + 1);
+      lock.current = false; setBusy(false);
+      if (saved) refresh();
+    }
+  }
+
+  async function savePost(draft: PostInsert) {
+    const reference = references.find(item => item.lineId === draft.line_id);
+    if (!reference) { setWriteError("선택한 노선 정보를 확인하지 못했습니다. 새로고침해 주세요."); return; }
+    await mutate(async () => {
+      const payload = validatePost(draft, reference);
+      if (editingPost && post) {
+        const saved = await updatePost(post, payload, reference);
+        setPost(saved); setEditingPost(false); setMessage("게시글을 수정했습니다.");
+      } else {
+        await ensureAnonymousAuthor({ captchaToken: token ?? undefined });
+        const saved = await createPost(payload, reference);
+        setShowForm(false); openPost(saved.id); setMessage("게시글을 등록했습니다.");
+      }
+    });
+  }
+
+  function openPost(id: string) {
+    setSelectedId(id); setPost(null); setComments([]); setDetailLoading(true); setDetailError("");
+    setCommentError(""); setCommentPage(0); setEditingPost(false); setEditingComment(null); setReply(""); setWriteError("");
+  }
+
+  function submitReply(event: FormEvent) {
+    event.preventDefault();
+    if (!post) return;
+    void mutate(async () => {
+      if (!reply.trim() || Array.from(reply.trim()).length > 2000) throw new ConnectionError("validation", "댓글은 1~2000자로 입력해 주세요.");
+      await ensureAnonymousAuthor({ captchaToken: token ?? undefined });
+      await createComment(post.id, reply);
+      setReply(""); setMessage("댓글을 등록했습니다. 댓글 목록의 마지막 페이지에서 확인할 수 있습니다.");
+    });
+  }
+
+  function removePost() {
+    if (!post || !window.confirm("게시글을 삭제하면 달린 댓글도 모두 삭제됩니다. 삭제할까요?")) return;
+    void mutate(async () => {
+      await deletePost(post); setSelectedId(null); setPost(null); setEditingPost(false); setMessage("게시글과 댓글을 삭제했습니다.");
+    });
+  }
+
+  function removeComment(comment: CommentRow) {
+    if (!window.confirm("이 댓글을 삭제할까요?")) return;
+    void mutate(async () => {
+      await deleteComment(comment); setEditingComment(null); setMessage("댓글을 삭제했습니다.");
+    });
+  }
+
+  const stationName = (id: string | null) => !id ? "노선 전체" : references.flatMap(item => item.stations).find(s => s.membershipId === id)?.name ?? "역 정보 확인 필요";
+  const lineName = (id: string) => references.find(item => item.lineId === id)?.lineName ?? "노선 정보 확인 필요";
+  const captcha = siteKey ? <Turnstile siteKey={siteKey} attempt={attempt} onToken={setToken} onError={() => setWriteError("봇 방지 확인에 실패했습니다. 다시 확인해 주세요.")} /> : null;
+  const canCreate = !siteKey || !!token;
+  const canUseReference = references.length > 0 && !referenceLoading;
+  const filterReference = references.find(item => item.lineId === (line || activeLineId));
+
+  return <div className="space-y-6">
+    <PageHeader title="이용자 커뮤니티" description="같은 노선을 이용하는 우리, 작은 경험과 의견을 함께 나눠요." icon="community" eyebrow="OUR EVERYDAY STORIES" line />
+    <section className="ui-card space-y-2">
+      <p className="text-sm text-gray-600">이용자가 직접 작성하는 공개 게시판입니다. <strong>공식 철도기관 민원 접수 서비스가 아닙니다.</strong></p>
+      <details className="text-xs text-ink-muted"><summary className="py-2 font-semibold">익명 작성과 개인정보 안내</summary><p className="mt-2">개인정보를 입력하지 마세요. 로그인 화면 없이 작성하며 본인 글·댓글만 수정·삭제할 수 있습니다. 브라우저 데이터를 지우거나 기기를 바꾸면 관리 권한을 잃을 수 있습니다. 작성·수정 횟수 제한이 적용됩니다.</p></details>
+    </section>
+    {referenceError && <p role="alert" className="text-sm text-amber-700">{referenceError} <button className="underline" onClick={refresh} disabled={busy}>다시 불러오기</button></p>}
+    {ownerError && <p role="alert" className="text-sm text-amber-700">{ownerError}</p>}
+    {message && <p role="status" className="bg-green-50 border border-green-200 text-green-700 rounded-xl p-3 text-sm">{message}</p>}
+    {writeError && <p role="alert" className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm">{writeError}</p>}
+
+    {selectedId ? <div className="space-y-4">
+      <div className="flex justify-between gap-2">
+        <button disabled={busy} className={button} onClick={() => { setSelectedId(null); setEditingPost(false); setEditingComment(null); setWriteError(""); }}>← 목록으로</button>
+        <button disabled={busy || detailLoading} className={button} onClick={refresh}>새로고침</button>
       </div>
-
-      {/* Staff toggle */}
-      <div className="flex items-center justify-between bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-        <div>
-          <p className="font-semibold text-gray-800 text-sm">
-            {isStaffView ? "🛡️ 코레일 직원 모드" : "👤 일반 사용자 모드"}
-          </p>
-          <p className="text-xs text-gray-400">
-            {isStaffView ? "민원 답변 및 상태 변경 가능" : "민원 등록 및 조회 가능"}
-          </p>
-        </div>
-        <button
-          onClick={() => setIsStaffView((v) => !v)}
-          className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all
-            ${isStaffView ? "bg-red-600 text-white border-red-600" : "bg-white text-gray-600 border-gray-200 hover:border-red-400"}`}
-        >
-          {isStaffView ? "직원 모드 ON" : "직원 모드 OFF"}
-        </button>
-      </div>
-
-      {selectedPost ? (
-        /* Post detail view */
-        <div className="space-y-4">
-          <button
-            onClick={() => setSelectedPost(null)}
-            className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 transition-colors"
-          >
-            ← 목록으로
-          </button>
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-lg">{CATEGORY_ICONS[selectedPost.category]}</span>
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLES[selectedPost.status]}`}>
-                {selectedPost.status}
-              </span>
-              <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-                {selectedPost.category}
-              </span>
-            </div>
-            <h2 className="text-lg font-bold text-gray-900 mb-2">{selectedPost.title}</h2>
-            <div className="flex items-center gap-3 text-xs text-gray-400 mb-4">
-              <span>{selectedPost.line} · {selectedPost.station}역</span>
-              <span>·</span>
-              <span>{selectedPost.author}</span>
-              <span>·</span>
-              <span>{selectedPost.date}</span>
-              <span>·</span>
-              <span>조회 {selectedPost.views}</span>
-            </div>
-            <p className="text-sm text-gray-700 leading-relaxed border-t pt-4">{selectedPost.content}</p>
-          </div>
-
-          {/* Replies */}
-          {selectedPost.replies.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="font-semibold text-gray-800 text-sm">답변 ({selectedPost.replies.length})</h3>
-              {selectedPost.replies.map((reply, i) => (
-                <div
-                  key={i}
-                  className={`rounded-xl p-4 border ${reply.isStaff ? "bg-red-50 border-red-200" : "bg-gray-50 border-gray-200"}`}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    {reply.isStaff && <span className="text-xs bg-red-600 text-white px-2 py-0.5 rounded-full font-medium">코레일 공식</span>}
-                    <span className="text-sm font-semibold text-gray-800">{reply.author}</span>
-                    <span className="text-xs text-gray-400">{reply.date}</span>
-                  </div>
-                  <p className="text-sm text-gray-700">{reply.content}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Reply input */}
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-            <h3 className="font-semibold text-gray-800 text-sm mb-3">
-              {isStaffView ? "🛡️ 공식 답변 작성" : "💬 댓글 작성"}
-            </h3>
-            <textarea
-              value={replyText}
-              onChange={(e) => setReplyText(e.target.value)}
-              placeholder={isStaffView ? "민원인에게 공식 답변을 작성해 주세요." : "의견을 남겨주세요."}
-              className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 min-h-[80px] resize-none"
-            />
-            <button
-              onClick={handleReply}
-              disabled={!replyText.trim()}
-              className="mt-2 px-4 py-2 bg-red-500 hover:bg-red-600 disabled:bg-gray-200 disabled:text-gray-400 text-white font-medium rounded-lg text-sm transition-all"
-            >
-              {isStaffView ? "공식 답변 등록" : "댓글 등록"}
-            </button>
-          </div>
-        </div>
-      ) : (
-        /* Post list view */
-        <>
-          {/* New post button */}
-          {!isStaffView && !showNewForm && (
-            <button
-              onClick={() => setShowNewForm(true)}
-              className="w-full py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl shadow-md transition-all"
-            >
-              + 민원 등록하기
-            </button>
-          )}
-
-          {submitSuccess && (
-            <div className="bg-green-50 border border-green-200 text-green-700 rounded-xl p-3 text-sm font-medium text-center">
-              ✓ 민원이 접수되었습니다.
-            </div>
-          )}
-
-          {/* New post form */}
-          {showNewForm && (
-            <section className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 space-y-4">
-              <h2 className="font-bold text-gray-800">민원 내용 입력</h2>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 mb-1 block">카테고리</label>
-                  <select
-                    value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value as Category)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
-                  >
-                    {(["혼잡", "시설", "안전", "서비스", "기타"] as Category[]).map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 mb-1 block">노선 (선택)</label>
-                  <input
-                    type="text"
-                    placeholder="예: 2호선"
-                    value={newLine}
-                    onChange={(e) => setNewLine(e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-500 mb-1 block">역 (선택)</label>
-                <input
-                  type="text"
-                  placeholder="예: 강남"
-                  value={newStation}
-                  onChange={(e) => setNewStation(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-500 mb-1 block">제목</label>
-                <input
-                  type="text"
-                  placeholder="민원 제목을 입력해 주세요."
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-500 mb-1 block">내용</label>
-                <textarea
-                  placeholder="불편하셨던 점이나 개선 요청사항을 자세히 적어주세요."
-                  value={newContent}
-                  onChange={(e) => setNewContent(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 min-h-[100px] resize-none"
-                />
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => setShowNewForm(false)} className="flex-1 py-2.5 border border-gray-200 text-gray-600 font-medium rounded-xl hover:bg-gray-50 transition-all">
-                  취소
-                </button>
-                <button onClick={handleNewPost} disabled={!newTitle.trim() || !newContent.trim()} className="flex-1 py-2.5 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 disabled:bg-gray-200 disabled:text-gray-400 transition-all">
-                  등록하기
-                </button>
-              </div>
-            </section>
-          )}
-
-          {/* Category filter */}
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setFilterCategory(cat)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-all
-                  ${filterCategory === cat ? "bg-red-500 text-white border-transparent" : "bg-white border-gray-200 text-gray-600 hover:border-red-300"}`}
-              >
-                {cat !== "전체" && CATEGORY_ICONS[cat as Category]} {cat}
-              </button>
-            ))}
-          </div>
-
-          {/* Post list */}
-          <section className="space-y-3">
-            {filtered.map((post) => (
-              <button
-                key={post.id}
-                onClick={() => {
-                  setPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, views: p.views + 1 } : p));
-                  setSelectedPost({ ...post, views: post.views + 1 });
-                }}
-                className="w-full bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-left hover:border-red-200 hover:shadow-md transition-all"
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-base">{CATEGORY_ICONS[post.category]}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLES[post.status]}`}>
-                    {post.status}
-                  </span>
-                  <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{post.category}</span>
-                  {post.isCurrentUser && <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">내 글</span>}
-                </div>
-                <p className="font-semibold text-gray-800 text-sm mb-1 line-clamp-1">{post.title}</p>
-                <p className="text-xs text-gray-500 line-clamp-1 mb-2">{post.content}</p>
-                <div className="flex items-center gap-2 text-xs text-gray-400">
-                  <span>{post.line} · {post.station}역</span>
-                  <span>·</span>
-                  <span>{post.author}</span>
-                  <span>·</span>
-                  <span>{post.date}</span>
-                  <span className="ml-auto">조회 {post.views} · 답변 {post.replies.length}</span>
-                </div>
-              </button>
-            ))}
+      {detailLoading ? <p role="status" className="py-8 text-center text-sm text-gray-500">게시글과 댓글을 불러오는 중입니다…</p>
+        : detailError ? <p role="alert" className="text-sm text-red-700">{detailError}</p>
+        : !post ? <p className="text-sm text-gray-500 py-8 text-center">게시글이 삭제되었거나 더 이상 조회할 수 없습니다.</p>
+        : <>
+          {editingPost && canUseReference ? <PostForm key={post.id} references={references} initial={post} busy={busy} canSubmit onSave={savePost} onCancel={() => setEditingPost(false)} />
+            : <article className="ui-card">
+              <div className="flex flex-wrap items-center gap-2 mb-3"><Icon name={icons[post.category] ?? "community"} width={18} height={18} /><span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">{post.category}</span>{mine.posts.includes(post.id) && <span className="text-xs text-brand-ink">내 글</span>}</div>
+              <h2 className="text-lg font-bold text-gray-900 mb-2 break-words">{post.title}</h2>
+              <p className="text-xs text-gray-400 mb-4">{lineName(post.line_id)} · {stationName(post.line_station_id)} · 익명 이용자 · {date(post.created_at)}{post.updated_at !== post.created_at && " · 수정됨"}</p>
+              <p className="text-sm text-gray-700 leading-relaxed border-t pt-4 whitespace-pre-wrap break-words">{post.body}</p>
+              {mine.posts.includes(post.id) && <div className="flex gap-2 mt-4"><button disabled={busy || !canUseReference || !references.some(item => item.lineId === post.line_id)} className={button} onClick={() => { setEditingPost(true); setEditingComment(null); setWriteError(""); }}>수정</button><button disabled={busy} className={`${button} text-red-600`} onClick={removePost}>삭제</button></div>}
+            </article>}
+          <section className="space-y-3" aria-label="댓글 목록">
+            <h3 className="font-semibold text-gray-800 text-sm flex items-center gap-2"><Icon name="community" width={18} height={18} />댓글</h3>
+            {commentError ? <p role="alert" className="text-sm text-red-700">{commentError}</p>
+              : comments.length === 0 ? <p className="text-sm text-gray-500">{commentPage === 0 ? "아직 댓글이 없습니다." : "이 페이지에 댓글이 없습니다. 이전 페이지를 확인해 주세요."}</p>
+              : comments.map(comment => <article key={comment.id} className="rounded-xl p-4 border bg-gray-50 border-gray-200">
+                <div className="flex flex-wrap gap-2 items-center mb-2"><span className="text-sm font-semibold text-gray-800">{mine.comments.includes(comment.id) ? "내 댓글" : "익명 이용자"}</span><span className="text-xs text-gray-400">{date(comment.created_at)}{comment.created_at !== comment.updated_at && " · 수정됨"}</span></div>
+                {editingComment?.id === comment.id ? <form onSubmit={event => {
+                  event.preventDefault(); void mutate(async () => {
+                    await updateComment(editingComment, editedReply); setEditingComment(null); setMessage("댓글을 수정했습니다.");
+                  });
+                }} className="space-y-2">
+                  <label className="block text-xs text-gray-500">댓글 수정<textarea required maxLength={2000} disabled={busy} className={`${communityField} min-h-[80px]`} value={editedReply} onChange={e => setEditedReply(e.target.value)} /></label>
+                  <button disabled={busy || !editedReply.trim()} className={button}>수정 저장</button> <button disabled={busy} type="button" className={button} onClick={() => setEditingComment(null)}>취소</button>
+                </form> : <>
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">{comment.body}</p>
+                  {mine.comments.includes(comment.id) && <div className="flex gap-2 mt-3"><button disabled={busy} className={button} onClick={() => { setEditingComment(comment); setEditedReply(comment.body); setEditingPost(false); setWriteError(""); }}>수정</button><button disabled={busy} className={`${button} text-red-600`} onClick={() => removeComment(comment)}>삭제</button></div>}
+                </>}
+              </article>)}
+            {!commentError && <div className="flex justify-between items-center"><button disabled={busy || commentPage === 0} className={button} onClick={() => { setDetailLoading(true); setCommentPage(value => value - 1); setEditingComment(null); }}>이전 댓글</button><span className="text-xs text-gray-500">{commentPage + 1}페이지</span><button disabled={busy || !commentsNext} className={button} onClick={() => { setDetailLoading(true); setCommentPage(value => value + 1); setEditingComment(null); }}>다음 댓글</button></div>}
           </section>
-        </>
-      )}
-    </div>
-  );
+          {!editingPost && !editingComment && <form onSubmit={submitReply} className="ui-card space-y-3">
+            <label className="block font-semibold text-gray-800 text-sm">댓글 작성<textarea className={`${communityField} min-h-[80px] mt-2`} required maxLength={2000} disabled={busy} value={reply} onChange={e => setReply(e.target.value)} placeholder="의견을 남겨주세요. (최대 2,000자)" /></label>
+            {captcha}
+            <button disabled={busy || !reply.trim() || !canCreate} className="ui-primary">{busy ? "저장 중…" : "댓글 등록"}</button>
+          </form>}
+        </>}
+    </div> : <>
+      {!showForm && <button disabled={busy || !canUseReference} onClick={() => { setShowForm(true); setWriteError(""); setMessage(""); }} className="ui-primary w-full">+ 게시글 작성하기</button>}
+      {showForm && canUseReference && <PostForm references={references} defaultLineId={line || undefined} busy={busy} canSubmit={canCreate} onSave={savePost} onCancel={() => setShowForm(false)}>{captcha}</PostForm>}
+      <div className="flex gap-2 overflow-x-auto p-2 -mx-2" aria-label="게시글 분류">
+        {["", ...CATEGORIES].map(value => <button key={value} aria-pressed={category === value} disabled={busy} onClick={() => { setCategory(value); setPage(0); setListLoading(true); }} className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap border ${category === value ? "bg-brand-soft text-brand-ink border-pink-300" : "bg-white border-gray-200 text-gray-600"}`}>{value && <Icon name={icons[value]} width={17} height={17} />}{value || "전체"}</button>)}
+      </div>
+      <div className="ui-card grid grid-cols-2 gap-3">
+        <label className="text-xs text-gray-500">노선별 검색<select disabled={busy || references.length === 0} className={communityField} value={line} onChange={e => { setLine(e.target.value); setStation(""); setPage(0); setListLoading(true); }}><option value="">2호선 전체</option>{references.map(item => <option key={item.lineId} value={item.lineId}>{item.lineName}</option>)}</select></label>
+        <label className="text-xs text-gray-500">역별 검색<select disabled={busy || !activeLineId} className={communityField} value={station} onChange={e => { setStation(e.target.value); setPage(0); setListLoading(true); }}><option value="">전체 역</option>{filterReference?.stations.map(s => <option key={s.membershipId} value={s.membershipId}>{s.name}</option>)}</select></label>
+      </div>
+      <section className="space-y-3" aria-busy={listLoading}>
+        <div className="flex items-center justify-between"><h2 className="font-bold text-gray-800">게시글 목록</h2><button disabled={busy || listLoading} className={button} onClick={refresh}>새로고침</button></div>
+        {!activeLineId ? <p role="status" className="text-sm text-gray-500 text-center py-8">2호선 노선 정보를 확인한 뒤 게시글을 조회합니다.</p> : listLoading ? <p role="status" className="text-sm text-gray-500 text-center py-8">게시글을 불러오는 중입니다…</p>
+          : listError ? <p role="alert" className="text-sm text-red-700 bg-red-50 rounded-xl p-4">{listError}</p>
+          : posts.length === 0 ? <p className="ui-empty text-sm">{category || line || station ? "선택한 조건에 해당하는 게시글이 없습니다." : page > 0 ? "이 페이지에 게시글이 없습니다. 이전 페이지를 확인해 주세요." : "아직 작성된 게시글이 없습니다."}</p>
+          : posts.map(item => <button disabled={busy} key={item.id} onClick={() => openPost(item.id)} className="w-full ui-card text-left hover:border-pink-300 hover:shadow-md">
+            <div className="flex gap-2 items-center mb-2"><Icon name={icons[item.category] ?? "community"} width={18} height={18} /><span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-full">{item.category}</span>{mine.posts.includes(item.id) && <span className="text-xs bg-brand-soft text-brand-ink px-2 py-1 rounded-full">내 글</span>}</div>
+            <h3 className="font-semibold text-gray-800 text-base mb-2 line-clamp-1 break-words">{item.title}</h3><p className="text-sm text-gray-500 line-clamp-2 mb-3">{item.body}</p>
+            <p className="text-xs text-gray-400">{lineName(item.line_id)} · {stationName(item.line_station_id)} · 익명 이용자 · {date(item.created_at)}</p>
+          </button>)}
+        {!listLoading && !listError && <div className="flex items-center justify-between"><button disabled={busy || page === 0} className={button} onClick={() => { setPage(value => value - 1); setListLoading(true); }}>이전</button><span className="text-xs text-gray-500">{page + 1}페이지</span><button disabled={busy || !hasNext} className={button} onClick={() => { setPage(value => value + 1); setListLoading(true); }}>다음</button></div>}
+      </section>
+    </>}
+  </div>;
 }

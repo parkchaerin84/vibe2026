@@ -1,0 +1,398 @@
+{
+  "reviewedOn": "2026-11-08",
+  "stationSource": "https://data.seoul.go.kr/dataList/OA-15442/S/1/datasetView.do",
+  "topologySource": "https://www.seoulmetro.co.kr/kr/cyberStation.do",
+  "directionSource": "https://mediahub.seoul.go.kr/archives/1076164",
+  "shinbundangTopologySource": "https://www.shinbundang.co.kr/dxline/dxline_gy.jsp",
+  "line2SeedSha256": "462f4a891cbf2f520e5f42f959be20486e5675a6d82256d4906cc773f21c2d58",
+  "shinbundang": [
+    {
+      "sourceCode": "I11D1:D004",
+      "name": "신사",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "I11D1:D005",
+      "name": "논현",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "I11D1:D006",
+      "name": "신논현",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "I11D1:D007",
+      "name": "강남",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "I11D1:D008",
+      "name": "양재(서초구청)",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "I11D1:D009",
+      "name": "양재시민의숲(매헌)",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "I11D1:D010",
+      "name": "청계산입구",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "I11D1:D011",
+      "name": "판교",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "I11D1:D012",
+      "name": "정자",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "I11D1:D013",
+      "name": "미금",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "I11D1:D014",
+      "name": "동천",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "I11D1:D015",
+      "name": "수지구청",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "I11D1:D016",
+      "name": "성복",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "I11D1:D017",
+      "name": "상현",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "I11D1:D018",
+      "name": "광교중앙(아주대)",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "I11D1:D019",
+      "name": "광교(경기대)",
+      "branch": "main"
+    }
+  ],
+  "line2": [
+    {
+      "sourceCode": "02호선:0201",
+      "externalNumber": "201",
+      "name": "시청",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0202",
+      "externalNumber": "202",
+      "name": "을지로입구",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0203",
+      "externalNumber": "203",
+      "name": "을지로3가",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0204",
+      "externalNumber": "204",
+      "name": "을지로4가",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0205",
+      "externalNumber": "205",
+      "name": "동대문역사문화공원",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0206",
+      "externalNumber": "206",
+      "name": "신당",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0207",
+      "externalNumber": "207",
+      "name": "상왕십리",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0208",
+      "externalNumber": "208",
+      "name": "왕십리",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0209",
+      "externalNumber": "209",
+      "name": "한양대",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0210",
+      "externalNumber": "210",
+      "name": "뚝섬",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0211",
+      "externalNumber": "211",
+      "name": "성수",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0212",
+      "externalNumber": "212",
+      "name": "건대입구",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0213",
+      "externalNumber": "213",
+      "name": "구의",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0214",
+      "externalNumber": "214",
+      "name": "강변",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0215",
+      "externalNumber": "215",
+      "name": "잠실나루",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0216",
+      "externalNumber": "216",
+      "name": "잠실",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0217",
+      "externalNumber": "217",
+      "name": "잠실새내",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0218",
+      "externalNumber": "218",
+      "name": "종합운동장",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0219",
+      "externalNumber": "219",
+      "name": "삼성",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0220",
+      "externalNumber": "220",
+      "name": "선릉",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0221",
+      "externalNumber": "221",
+      "name": "역삼",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0222",
+      "externalNumber": "222",
+      "name": "강남",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0223",
+      "externalNumber": "223",
+      "name": "교대",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0224",
+      "externalNumber": "224",
+      "name": "서초",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0225",
+      "externalNumber": "225",
+      "name": "방배",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0226",
+      "externalNumber": "226",
+      "name": "사당",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0227",
+      "externalNumber": "227",
+      "name": "낙성대",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0228",
+      "externalNumber": "228",
+      "name": "서울대입구",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0229",
+      "externalNumber": "229",
+      "name": "봉천",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0230",
+      "externalNumber": "230",
+      "name": "신림",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0231",
+      "externalNumber": "231",
+      "name": "신대방",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0232",
+      "externalNumber": "232",
+      "name": "구로디지털단지",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0233",
+      "externalNumber": "233",
+      "name": "대림",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0234",
+      "externalNumber": "234",
+      "name": "신도림",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0235",
+      "externalNumber": "235",
+      "name": "문래",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0236",
+      "externalNumber": "236",
+      "name": "영등포구청",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0237",
+      "externalNumber": "237",
+      "name": "당산",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0238",
+      "externalNumber": "238",
+      "name": "합정",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0239",
+      "externalNumber": "239",
+      "name": "홍대입구",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0240",
+      "externalNumber": "240",
+      "name": "신촌",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0241",
+      "externalNumber": "241",
+      "name": "이대",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0242",
+      "externalNumber": "242",
+      "name": "아현",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0243",
+      "externalNumber": "243",
+      "name": "충정로",
+      "branch": "main"
+    },
+    {
+      "sourceCode": "02호선:0244",
+      "externalNumber": "211-1",
+      "name": "용답",
+      "branch": "seongsu"
+    },
+    {
+      "sourceCode": "02호선:0245",
+      "externalNumber": "211-2",
+      "name": "신답",
+      "branch": "seongsu"
+    },
+    {
+      "sourceCode": "02호선:0250",
+      "externalNumber": "211-3",
+      "name": "용두",
+      "branch": "seongsu"
+    },
+    {
+      "sourceCode": "02호선:0246",
+      "externalNumber": "211-4",
+      "name": "신설동",
+      "branch": "seongsu"
+    },
+    {
+      "sourceCode": "02호선:0247",
+      "externalNumber": "234-1",
+      "name": "도림천",
+      "branch": "sinjeong"
+    },
+    {
+      "sourceCode": "02호선:0248",
+      "externalNumber": "234-2",
+      "name": "양천구청",
+      "branch": "sinjeong"
+    },
+    {
+      "sourceCode": "02호선:0249",
+      "externalNumber": "234-3",
+      "name": "신정네거리",
+      "branch": "sinjeong"
+    },
+    {
+      "sourceCode": "02호선:0200",
+      "externalNumber": "234-4",
+      "name": "까치산",
+      "branch": "sinjeong"
+    }
+  ]
+}

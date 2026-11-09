@@ -3,15 +3,80 @@
 @tailwind utilities;
 
 :root {
-  --background: #f8fafc;
-  --foreground: #1e293b;
+  --background: #FFF9FC;
+  --foreground: #333740;
 }
 
 body {
-  background: var(--background);
+  background: radial-gradient(ellipse at 94% 4%, #edf7fc 0, transparent 36rem), var(--background);
   color: var(--foreground);
   font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", Arial,
     sans-serif;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: #F7A8C4; color: #333740; }
+html { scroll-padding-top: 9rem; }
+.site-shell :is(a, button, input, select, textarea, summary):focus-visible {
+  outline: 3px solid #8A2B54;
+  outline-offset: 4px;
+}
+.site-shell :is(button, a, input, select, textarea) { -webkit-tap-highlight-color: transparent; }
+.site-shell button:not(:disabled), .site-shell summary { cursor: pointer; }
+.site-shell button:disabled { cursor: not-allowed; }
+.site-shell button { min-height: 44px; }
+.site-shell :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  min-height: 48px;
+  border-color: #A18B99;
+  border-radius: 12px;
+  background-color: #fff;
+  color: #333740;
+  padding: 11px 14px;
+  font-size: 16px;
+  margin-top: 6px;
+  width: 100%;
+}
+.site-shell :is(input, select, textarea):disabled { background-color: #F5F2F5; color: #687080; }
+.site-shell textarea { height: 140px; line-height: 1.8; }
+.site-shell label { line-height: 1.6; font-size: 14px; font-weight: 600; }
+.site-shell :is(input, select, textarea) { font-weight: 400; }
+.site-shell input::placeholder, .site-shell textarea::placeholder { color: #687080; opacity: 1; }
+.site-shell :is(p, h1, h2, h3, dd, label) { word-break: keep-all; overflow-wrap: anywhere; }
+.site-shell main > div { min-width: 0; }
+.skip-link { position: fixed; left: 16px; top: -90px; z-index: 100; padding: 12px 20px; border-radius: 12px; background: #333740; color: #fff; }
+.skip-link:focus { top: 12px; }
+
+@layer components {
+  .ui-card { @apply bg-white rounded-2xl sm:rounded-3xl border p-5 sm:p-7; border-color: #EBDDE5; box-shadow: 0 5px 24px #74334f05; }
+  .ui-page-header { @apply rounded-3xl p-6 sm:p-8 border; background: linear-gradient(115deg, #FFE8F1, #F3F7FE); border-color: #F2D9E5; }
+  .ui-eyebrow { @apply text-xs font-bold tracking-widest; color: #74334F; }
+  .ui-icon-box { @apply inline-flex items-center justify-center rounded-2xl; width: 48px; height: 48px; background: #fff; color: #74334F; border: 1px solid #F0D9E4; }
+  .ui-primary { @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 font-bold text-sm transition-colors; min-height: 48px; background: #E86A9A; color: #32111F; border: 1px solid #CA4C7D; box-shadow: 0 4px 12px #e86a9a18; }
+  .ui-primary:hover:not(:disabled) { background: #EE87AD; }
+  .ui-primary:disabled { background: #EEE7EC; color: #687080; border-color: #DDD3DA; box-shadow: none; }
+  .ui-secondary { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors; min-height: 44px; background: #fff; color: #434957; border: 1px solid #A18B99; }
+  .ui-secondary:hover:not(:disabled) { border-color: #AA5478; background: #FFF4F8; }
+  .ui-secondary:disabled { @apply opacity-50; }
+  .ui-field { @apply w-full rounded-xl border text-sm; }
+  .ui-link { @apply inline-flex items-center gap-2 text-sm font-semibold underline underline-offset-4; color: #873653; min-height: 44px; }
+  .ui-note { @apply rounded-2xl p-4 text-sm leading-relaxed; background: #EFF7FC; color: #3B5266; border: 1px solid #D5E8F3; }
+  .ui-muted-note { @apply text-xs leading-relaxed; color: #555D6B; }
+  .line-badge { @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold; background: #EBF8F0; color: #176139; border: 1px solid #C5E8D2; }
+  .line-badge i { @apply inline-block rounded-full; width: 7px; height: 7px; background: #00A84D; }
+  .ui-section-label { @apply text-xs font-semibold tracking-widest uppercase text-ink-muted; }
+  .ui-empty { @apply rounded-3xl border border-dashed bg-white text-center p-8 sm:p-12; border-color: #DDCCD6; color: #555D6B; }
+  .feature-card { @apply relative flex flex-col rounded-3xl border p-6 sm:p-7 transition-all; border-color: #EBDDE5; background: #fff; }
+  .feature-card:hover { border-color: #D58AA8; transform: translateY(-3px); box-shadow: 0 12px 30px #74334f0a; }
+}
+
+@media (max-width: 479px) {
+  .site-shell main .grid-cols-2 { grid-template-columns: minmax(0, 1fr); }
+  .site-shell main .grid-cols-2 > .col-span-2 { grid-column: span 1; }
+  .site-shell main .grid-cols-3 { gap: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
 }
 
 @layer utilities {

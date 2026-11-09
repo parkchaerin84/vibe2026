@@ -113,18 +113,18 @@ export default function AIPredictPage() {
   return (
     <div className="space-y-6">
       {/* Hero */}
-      <div className="bg-gradient-to-r from-violet-600 to-purple-700 rounded-2xl p-6 text-white">
+      <div className="ui-page-header">
         <div className="flex items-center gap-2 mb-1">
           <span className="text-2xl">🤖</span>
           <h1 className="text-2xl font-bold">AI 자리 예측</h1>
         </div>
-        <p className="text-violet-100 text-sm">
+        <p className="text-ink-muted text-sm">
           역별 혼잡도 패턴과 승하차 데이터를 분석해 앞으로 자리 날 확률을 예측합니다.
         </p>
       </div>
 
       {/* Step 1 – 노선 */}
-      <section className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+      <section className="ui-card">
         <h2 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
           <span className="bg-violet-600 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold">1</span>
           노선 선택
@@ -153,7 +153,7 @@ export default function AIPredictPage() {
 
       {/* Step 2 – 현재 탑승 역 */}
       {selectedLine && (
-        <section className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+        <section className="ui-card">
           <h2 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
             <span className="bg-violet-600 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold">2</span>
             현재 탑승 역
@@ -187,7 +187,7 @@ export default function AIPredictPage() {
 
       {/* Step 3 – 탑승 칸 */}
       {selectedStation && selectedLine && (
-        <section className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+        <section className="ui-card">
           <h2 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
             <span className="bg-violet-600 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold">3</span>
             현재 탑승 칸
@@ -213,7 +213,7 @@ export default function AIPredictPage() {
 
       {/* Step 4 – 시간대 */}
       {selectedCar !== null && (
-        <section className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+        <section className="ui-card">
           <h2 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
             <span className="bg-violet-600 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold">4</span>
             현재 시간대
@@ -253,7 +253,7 @@ export default function AIPredictPage() {
         <section className="space-y-4">
 
           {/* 현재 상태 */}
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+          <div className="ui-card">
             <h2 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
               <span>📍</span> 현재 위치
             </h2>
@@ -286,7 +286,7 @@ export default function AIPredictPage() {
 
           {/* 예측 타임라인 */}
           {predictions.length > 0 ? (
-            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+            <div className="ui-card">
               <h2 className="font-bold text-gray-800 mb-1 flex items-center gap-2">
                 <span>🔮</span> 앞으로의 예측
               </h2>
