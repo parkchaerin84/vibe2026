@@ -7,7 +7,7 @@
 `브라우저 → /api/facilities/restrooms → Supabase 공개 코드 검증 → 공식 HTTPS API` 순서다. 인증키를 브라우저로 전달하거나 `NEXT_PUBLIC_` 변수로 바꾸지 않는다. 브라우저는 DB의 노선·역 코드와 membership UUID만 전송한다.
 
 - Pages Function과 로컬 미리보기는 `server/facilities.ts`의 같은 표준 Request/Response/fetch 로직을 사용한다. Node 전용 코드는 로컬 실행 스크립트에만 있다.
-- `wrangler.jsonc`는 출력 디렉터리를 `out`으로 지정한다. 계정 ID·토큰·API 키가 없으며, 파일 추가만으로 배포되지 않는다.
+- 로컬 `wrangler.jsonc`는 Git에서 제외한다. Git 연동 Preview는 대시보드의 빌드 명령 `npm run build`, 출력 `out`, 환경변수·Secret 설정을 사용한다. 로컬 설정 파일을 원격 배포 설정으로 올리지 않는다.
 - `public/_routes.json`은 빌드 시 `out`으로 복사되어 `/api/facilities/*`에만 Functions를 적용한다. 다른 정적 페이지에 불필요한 함수 호출을 추가하지 않는다.
 - Git 연동 또는 Wrangler를 통한 Pages 배포가 필요하다. Cloudflare 대시보드에서 정적 파일만 직접 업로드하는 방식은 Functions를 포함하지 않는다. 현재 운영 배포 설정을 변경하거나 실제 배포하지 않았다.
 
@@ -21,7 +21,7 @@
 
 로컬에서는 기존 `.env.local`의 `SUBWAY_FACILITY_API_KEY`를 서버 프로세스가 읽는다. 값은 출력하거나 다른 파일에 복사하지 않는다. 기존 Supabase 환경변수도 수정하지 않는다.
 
-향후 승인 후 Cloudflare Pages에서 설정할 항목:
+Cloudflare Pages에서 사용하는 항목(Preview 등록 완료, Production은 별도 승인 대상):
 
 1. Workers & Pages → SubwayEasy 프로젝트 → Settings → Variables and Secrets.
 2. `SUBWAY_FACILITY_API_KEY`는 Encrypt를 선택하여 Secret으로 저장한다. Preview/Production 환경을 구분한다.
@@ -40,6 +40,14 @@ npm run preview:facilities
 ```
 
 `http://127.0.0.1:3002/facilities`에서 전체 정적 사이트와 실제 서버 조회를 함께 확인한다. 이 미리보기는 같은 Pages Function 핸들러를 Node에서 실행한다. Cloudflare 네이티브 런타임 자체를 시험한 것은 아니다.
+
+## Cloudflare 요청 옵션과 오류 진단
+
+Workers는 `redirect: "error"`를 지원하지 않는다. Supabase 조회와 시설 API 조회 모두 `redirect: "manual"`로 요청하고, 모든 3xx 응답은 Location을 따라가지 않고 `redirect` 오류로 처리한다. 인증정보를 다른 주소로 전달하지 않으며, 자동 재시도도 하지 않는다.
+
+실패 시 `facility_lookup_failed` 구조화 로그를 남긴다. 허용하는 항목은 단계(`db_fetch`, `db_json`, `api_fetch`, `api_json`), 고정된 오류 코드, 외부 HTTP 상태, 허용 목록의 API 응답 코드, 고정된 예외 분류뿐이다. 키·URL·Location·요청 헤더·원본 응답·원본 예외 메시지·작성자 정보는 기록하지 않는다. API 응답 코드가 허용 목록 밖이면 원문 대신 `other`로 기록한다. 로그 기록 실패가 사용자 응답에 영향을 주지 않는다.
+
+공식 근거: https://developers.cloudflare.com/workers/runtime-apis/request/
 
 기존 `next dev`의 3001번은 Next.js 개발 서버만 실행하므로 서버 함수 경로를 제공하지 않는다. 3001번에서 시설 조회를 누르면 연결 오류를 표시하며 예시 결과나 키를 반환하지 않는다. 미리보기에서 기존 하차 공유/게시글을 작성하면 실제 DB에 저장되므로 단순 화면 테스트 중에는 등록하지 않는다.
 
@@ -99,6 +107,15 @@ npm run preview:facilities
 - `docs/facilities.md`: 이 안내.
 
 ## 검증 기록
+
+### 2026-11-10: Preview 공통 오류 수정
+
+- 서버 두 요청의 미지원 redirect 옵션을 수정하고 3xx 차단을 명시했다. 성공·빈 상태·매핑·캐시·인증·API 키 보호 동작은 유지했다. UI·Supabase Auth·DB/RLS·기존 사용자 데이터는 변경하지 않았다.
+- 전체 Node 회귀 테스트 67개와 타입 검사 통과. DB/API의 300/301/302/303/304/307/308/399를 추적하지 않는지, 실패 캐시가 재요청을 막는지, 오류 로그에 비밀값이 남지 않는지 검증했다.
+- 프로젝트 밖의 별도 검증 폴더에 Miniflare 4.20260730.0/workerd를 설치했다. 프로젝트 package.json과 package-lock.json은 변경하지 않았다.
+- 현재 배포와 같은 compatibility date `2026-05-09`의 실제 workerd 실행기로 기존/수정 코드를 비교했다. 기존 코드는 fixture 외부 요청 0회에서 HTTP502/network로 실패했고 수정 코드는 정상200·빈200·DB302차단·API307차단·잘못된JSON502를 통과했다. 정상 결과 재선택 시 캐시도 확인했다.
+- 네이티브 검증은 외부 통신을 완전히 테스트 응답으로 대체한 격리 검사다. 실제 API·DB 호출 0회이며, 테스트 응답은 서비스 UI·공개 출력·실제 DB에 제공하거나 저장하지 않는다. 검증 기록은 저장소 밖 `../../outputs/facilities-native-runtime-check.json`에 보관한다.
+- 커밋·푸시·원격 배포는 수행하지 않는다. 기존 Preview 주소는 수정 전 배포이므로 실제 공공데이터 조회 성공 여부는 승인 후 새 Preview에서 별도로 확인해야 한다.
 
 ### 2026-11-09: 2호선 전체 확대
 

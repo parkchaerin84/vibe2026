@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createFacilityHandler, type FacilityEnv } from "../server/facilities";
+import { createFacilityHandler, type FacilityEnv, type FacilityDiagnostic } from "../server/facilities";
 import type { FacilityData } from "../lib/facilities";
 import { RESTROOM_STATIONS, SUPPORTED_RESTROOMS, RESTROOM_COVERAGE } from "../lib/facilities";
 import metadata from "../lib/transit/share-stations.json";
@@ -14,22 +14,26 @@ const request = (code = "0222", id = member) => new Request(`https://example.inv
 const row = { lineNm: "2호선", stnCd: "0222", stnNm: "강남", fcltNm: "TEST_ONLY_FACILITY", fcltNo: "TEST_ONLY_1",
   dtlPstn: "TEST_ONLY_DETAIL 1,2", stnFlr: "B1", grndUdgdSe: "지하", vcntEntrcNo: "1", gateInoutSe: "내부", rstrmInfo: "TEST_ONLY_TYPE", whlchrAcsPsbltyYn: "Y", crtrYmd: "20210527" };
 const api = (rows: unknown[] = [row], total = rows.length) => ({ header: { resultCode: "00", resultMsg: "NORMAL_CODE" }, body: { totalCount: total, items: { item: rows } } });
-function harness(options: { db?: unknown; upstream?: unknown; status?: number; throws?: boolean; hold?: Promise<void>; code?: string } = {}) {
+function harness(options: { db?: unknown; upstream?: unknown; status?: number; dbStatus?: number; dbText?: string; apiText?: string; dbThrows?: Error; redirectLocation?: string; throws?: boolean; hold?: Promise<void>; code?: string } = {}) {
   const code = options.code ?? "0222";
   const name = RESTROOM_STATIONS[code];
   const calls: { host: string; code: string | null }[] = [];
+  const diagnostics: FacilityDiagnostic[] = [];
   const fetcher: typeof fetch = async (input, init) => {
     const url = new URL(String(input)); calls.push({ host: url.hostname, code: url.searchParams.get("stnCd") });
     assert.notEqual(init?.redirect, "follow");
-    assert.equal(init?.redirect, "error");
+    assert.equal(init?.redirect, "manual");
     if (url.hostname.endsWith("supabase.co")) {
       assert.equal(url.protocol, "https:");
       assert.equal(url.searchParams.get("id"), `eq.${member}`);
       assert.equal(url.searchParams.get("source_code"), `eq.02호선:${code}`);
       assert.doesNotMatch(url.searchParams.get("select")!, /owner_id|\*/);
+      if (options.dbThrows) throw options.dbThrows;
+      if (options.dbStatus && options.dbStatus >= 300 && options.dbStatus < 400) return new Response(null, { status: options.dbStatus, headers: { Location: options.redirectLocation ?? "https://example.invalid" } });
+      if (options.dbText !== undefined) return new Response(options.dbText, { status: options.dbStatus ?? 200 });
       return Response.json(options.db ?? [{ id: member, source_dataset: "seoul_metro_oa15442", source_code: `02호선:${code}`,
         stations: { name, source_dataset: "seoul_metro_oa15442", source_code: `02호선:${code}` },
-        lines: { name: "2호선", source_dataset: "seoul_metro_oa15442", source_code: "02호선" } }]);
+        lines: { name: "2호선", source_dataset: "seoul_metro_oa15442", source_code: "02호선" } }], { status: options.dbStatus ?? 200 });
     }
     assert.equal(url.origin, "https://apis.data.go.kr");
     assert.equal(url.pathname, "/B553766/facility/getFcRstrm");
@@ -38,11 +42,13 @@ function harness(options: { db?: unknown; upstream?: unknown; status?: number; t
     assert.equal(url.searchParams.get("stnCd"), code);
     await options.hold;
     if (options.throws) throw new Error(`PRIVATE_ERROR ${key} ${url}`);
+    if (options.status && options.status >= 300 && options.status < 400) return new Response(null, { status: options.status, headers: { Location: options.redirectLocation ?? "https://example.invalid" } });
+    if (options.apiText !== undefined) return new Response(options.apiText, { status: options.status ?? 200 });
     return Response.json(options.upstream ?? api([{ ...row, stnCd: code, stnNm: name }]), { status: options.status ?? 200 });
   };
   let clock = Date.parse("2026-11-08T00:00:00Z");
-  const handle = createFacilityHandler({ fetcher, now: () => clock });
-  return { handle, calls, advance: (ms: number) => { clock += ms; } };
+  const handle = createFacilityHandler({ fetcher, now: () => clock, onDiagnostic: diagnostic => diagnostics.push(diagnostic) });
+  return { handle, calls, diagnostics, advance: (ms: number) => { clock += ms; } };
 }
 
 test("server verifies DB membership then queries official HTTPS; original location fields remain separate", async () => {
@@ -188,4 +194,52 @@ test("a cached main-line station cannot leak into another station or branch sele
     assert.equal(body.status, code === "0200" ? "empty" : "ok");
   }
   assert.deepEqual(apiRequests, ["0201", "0250", "0200"]); assert.deepEqual(dbRequests, apiRequests);
+});
+
+test("DB redirects are rejected without following Location, querying the facility API or exposing credentials", async () => {
+  for (const status of [300, 301, 302, 303, 304, 307, 308, 399]) {
+    const h = harness({ dbStatus: status, redirectLocation: `https://example.invalid/?serviceKey=${encodeURIComponent(key)}` });
+    const r = await h.handle(request(), env); const body = await r.json();
+    assert.equal(r.status, 502); assert.equal(body.code, "redirect"); assert.equal(body.status, "error");
+    assert.equal(h.calls.length, 1);
+    assert.equal(h.diagnostics[0].stage, "db_fetch"); assert.equal(h.diagnostics[0].upstreamStatus, status);
+    assert.doesNotMatch(JSON.stringify([body, h.diagnostics]), /example\.invalid|serviceKey=|TEST_ONLY_PRIVATE_KEY/);
+    await h.handle(request(), env); assert.equal(h.calls.length, 1); // Failure cooldown, no retry.
+  }
+});
+
+test("facility API redirects never turn into data or forward the service key to another host", async () => {
+  for (const status of [300, 301, 302, 303, 304, 307, 308, 399]) {
+    const h = harness({ status, redirectLocation: `https://example.invalid/?serviceKey=${encodeURIComponent(key)}` });
+    const r = await h.handle(request(), env); const body = await r.json();
+    assert.equal(r.status, 502); assert.equal(body.code, "redirect"); assert.equal(h.calls.length, 2);
+    assert.equal(h.diagnostics[0].stage, "api_fetch"); assert.equal(h.diagnostics[0].upstreamStatus, status);
+    assert.doesNotMatch(JSON.stringify([body, h.diagnostics]), /example\.invalid|serviceKey=|TEST_ONLY_PRIVATE_KEY/);
+  }
+});
+
+test("diagnostics distinguish request and JSON failures without logging raw errors or responses", async () => {
+  const cases = [
+    { options: { dbThrows: new TypeError(`PRIVATE_ERROR ${key}`) }, stage: "db_fetch", kind: "type_error", http: undefined, count: 1 },
+    { options: { dbThrows: new DOMException(`PRIVATE_ERROR ${key}`, "TimeoutError") }, stage: "db_fetch", kind: "timeout", http: undefined, count: 1 },
+    { options: { dbText: `PRIVATE_BODY ${key}` }, stage: "db_json", kind: "invalid_json", http: 200, count: 1 },
+    { options: { throws: true }, stage: "api_fetch", kind: "network", http: undefined, count: 2 },
+    { options: { apiText: `<error>${key}</error>` }, stage: "api_json", kind: "invalid_json", http: 200, count: 2 },
+  ];
+  for (const { options, stage, kind, http, count } of cases) {
+    const h = harness(options); const r = await h.handle(request(), env); const body = await r.json();
+    assert.equal(r.status, 502); assert.equal(body.code, "network");
+    assert.equal(h.calls.length, count); assert.equal(h.diagnostics.length, 1);
+    assert.equal(h.diagnostics[0].stage, stage); assert.equal(h.diagnostics[0].failureKind, kind);
+    assert.equal(h.diagnostics[0].upstreamStatus, http);
+    assert.doesNotMatch(JSON.stringify([body, h.diagnostics]), /PRIVATE_ERROR|PRIVATE_BODY|serviceKey=|TEST_ONLY_PRIVATE_KEY|sb_publishable_/);
+  }
+});
+
+test("diagnostics only log approved API codes and do not change the response if logging fails", async () => {
+  const h = harness({ upstream: { header: { resultCode: key, resultMsg: key } } });
+  await h.handle(request(), env);
+  assert.equal(h.diagnostics[0].apiCode, "other"); assert.ok(!JSON.stringify(h.diagnostics).includes(key));
+  const handle = createFacilityHandler({ fetcher: async () => new Response(null, { status: 302 }), onDiagnostic: () => { throw new Error("TEST_ONLY_LOG_FAILURE"); } });
+  const r = await handle(request(), env); assert.equal(r.status, 502); assert.equal((await r.json()).code, "redirect");
 });
