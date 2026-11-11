@@ -3,6 +3,7 @@ import { getAuthorClient, getPublicClient } from "./client";
 import { ConnectionError } from "./config";
 import type { Database, SeatShareInsert, SeatShareRow } from "./database";
 import { SHARE_LINES, reachableStations, routeForDirection, type ShareReference } from "../transit/share-routes";
+import { SHARE_CAR_LIMITS } from "../transit/car-policy";
 
 export const SHARE_COLUMNS = "id,line_id,current_line_station_id,exit_line_station_id,car_number,direction_label,created_at,expires_at";
 export const DIRECTIONS = ["신사 방면", "광교 방면"] as const;
@@ -18,7 +19,10 @@ export function validateShare(draft: SeatShareInsert, reference: ShareReference)
     throw new ConnectionError("validation", "조회된 노선의 검증된 역을 선택해 주세요.");
   }
   if (draft.current_line_station_id === draft.exit_line_station_id) throw new ConnectionError("validation", "현재 역과 하차 예정 역을 다르게 선택해 주세요.");
-  if (!Number.isInteger(draft.car_number) || draft.car_number < 1 || draft.car_number > 20) throw new ConnectionError("validation", "탑승 칸 번호를 확인해 주세요.");
+  const carLimit = SHARE_CAR_LIMITS[reference.lineKey];
+  if (!Number.isInteger(draft.car_number) || draft.car_number < 1 || draft.car_number > carLimit) {
+    throw new ConnectionError("validation", `${definition.name} 탑승 칸은 1~${carLimit}번 중에서 선택해 주세요.`);
+  }
   const route = routeForDirection(reference, draft.direction_label);
   if (!route) throw new ConnectionError("validation", "운행 구간에 맞는 방향을 선택해 주세요.");
   if (!reachableStations(reference, route, draft.current_line_station_id, draft.direction_label)

@@ -5,6 +5,7 @@ import type { Database } from "../lib/supabase/database";
 import { loadShareReference } from "../lib/supabase/share-reference";
 import { insertSeatShare, validateShare } from "../lib/supabase/seat-shares";
 import { SHARE_LINES, SHARE_ROUTES, reachableStations, stationsForRoute, type ShareLineKey, type ShareReference } from "../lib/transit/share-routes";
+import { SHARE_CAR_LIMITS, shareCarNumbers } from "../lib/transit/car-policy";
 
 // Fake UUIDs/HTTP transport only. Never signs up or writes to the live database.
 function reference(key: ShareLineKey): ShareReference {
@@ -130,4 +131,30 @@ test("invalid route is rejected before any insert request", async () => {
   const { client, calls } = transport("line2");
   await assert.rejects(insertSeatShare(draft(line2, "02호선:0244", "02호선:0246", "성수 방면"), line2, client), { code: "validation" });
   assert.equal(calls.length, 0);
+});
+
+test("Line 2 share input accepts cars 1/10 but rejects 11/20 and malformed values before network", async () => {
+  const valid = draft(line2, "02호선:0222", "02호선:0223", "내선순환");
+  for (const car_number of [1, 10]) assert.equal(validateShare({ ...valid, car_number }, line2).car_number, car_number);
+  const { client, calls } = transport("line2");
+  for (const car_number of [0, 11, 20, -1, 1.5, NaN, Infinity]) {
+    await assert.rejects(insertSeatShare({ ...valid, car_number }, line2, client), { code: "validation" });
+  }
+  assert.equal(calls.length, 0);
+});
+
+test("Line 2 branches share the same 10-car input limit", () => {
+  for (const valid of [draft(line2, "02호선:0211", "02호선:0246", "신설동 방면"),
+    draft(line2, "02호선:0234", "02호선:0200", "까치산 방면")]) {
+    assert.equal(validateShare({ ...valid, car_number: 10 }, line2).car_number, 10);
+    assert.throws(() => validateShare({ ...valid, car_number: 11 }, line2), { code: "validation" });
+  }
+});
+
+test("shared car options use Line 2 policy while preserving hidden legacy validation", () => {
+  assert.equal(SHARE_CAR_LIMITS.line2, 10);
+  assert.deepEqual(shareCarNumbers("line2"), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  const legacy = { line_id: sd.lineId, current_line_station_id: sd.stations[0].membershipId,
+    exit_line_station_id: sd.stations[1].membershipId, direction_label: "광교 방면", car_number: 20 };
+  assert.equal(validateShare({ ...legacy, car_number: 20 }, sd).car_number, 20);
 });

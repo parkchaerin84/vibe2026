@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import Icon from "@/components/ui/Icon";
-import JourneyIllustration from "@/components/ui/JourneyIllustration";
 import { loadShareReference } from "@/lib/supabase/share-reference";
 import { safeErrorMessage } from "@/lib/supabase/config";
 import type { ShareReference } from "@/lib/transit/share-routes";
@@ -14,12 +14,18 @@ import { FAVORITES_STORAGE_KEY, availableFavorite, changeFavorites, parseFavorit
 const field = "ui-field";
 
 function CoreLinks() {
-  return <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+  return <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+    <Link href="/find-seat" className="feature-card !bg-[#EDF7FC] !border-[#D4E9F4]">
+      <span className="ui-icon-box !bg-white !text-[#315C74] mb-5"><Icon name="train" /></span>
+      <h3 className="text-lg font-bold">하차 정보 찾기</h3>
+      <p className="text-sm text-ink-muted mt-2 leading-relaxed flex-1">방향과 탑승 칸을 선택하고,<br />공유된 하차 예정 정보를 찾아봐요.</p>
+      <span className="mt-5 text-sm font-bold text-[#315C74] inline-flex items-center gap-2">하차 정보 찾기 <Icon name="arrow" width={18} height={18} /></span>
+    </Link>
     <Link href="/share-seat" className="feature-card !bg-brand-soft !border-pink-200 group">
       <div className="flex justify-between items-center mb-5"><span className="ui-icon-box"><Icon name="share" /></span><span className="text-xs font-bold text-brand-ink">메인 기능</span></div>
-      <h3 className="text-lg font-bold">하차 정보 공유</h3>
-      <p className="text-sm text-ink-muted mt-2 leading-relaxed flex-1">내리는 역을 나누고,<br />같은 구간 승객의 제보를 확인해요.</p>
-      <span className="mt-5 text-sm font-bold text-brand-ink inline-flex items-center gap-2">하차 정보 보러 가기 <Icon name="arrow" width={18} height={18} /></span>
+      <h3 className="text-lg font-bold">하차 정보 공유하기</h3>
+      <p className="text-sm text-ink-muted mt-2 leading-relaxed flex-1">내리는 역을 나누고,<br />내가 등록한 제보를 관리해요.</p>
+      <span className="mt-5 text-sm font-bold text-brand-ink inline-flex items-center gap-2">내 하차 정보 공유하기 <Icon name="arrow" width={18} height={18} /></span>
     </Link>
     <Link href="/facilities" className="feature-card">
       <span className="ui-icon-box !bg-[#EDF7FC] !border-[#D4E9F4] !text-[#315C74] mb-5"><Icon name="facilities" /></span>
@@ -89,12 +95,14 @@ export default function Home() {
     <section className="relative overflow-hidden rounded-[28px] sm:rounded-[36px] border border-pink-100 bg-gradient-to-br from-[#FFE9F2] via-[#FFF2F7] to-[#E9F5FC] px-6 py-8 sm:px-10 sm:py-10 grid md:grid-cols-[1.25fr_1fr] items-center gap-4">
       <div className="relative z-10">
         <span className="line-badge mb-5"><i aria-hidden="true" />서울 2호선과 함께</span>
-        <h1 className="text-3xl sm:text-[44px] lg:text-[48px] font-bold leading-[1.3] tracking-tight">함께 나누는,<br /><span className="text-brand-ink">조금 더 편한 이동.</span></h1>
+        <h1 className="text-[24px] sm:text-[36px] md:text-[30px] lg:text-[40px] xl:text-[44px] font-bold leading-[1.35] tracking-tight"><span className="block">앉고 싶은데,</span><span className="block text-[#B83C6D]">언제쯤 자리가 날까?</span></h1>
         <p className="text-sm sm:text-base text-ink-muted leading-relaxed mt-5 max-w-md">내리는 역을 공유하고 필요한 정보를 찾아보세요.<br className="hidden sm:block" /> 지하철의 작은 불편을 함께 덜어가요.</p>
-        <div className="flex flex-col sm:flex-row gap-3 mt-7"><Link href="/share-seat" className="ui-primary">하차 정보 공유하기 <Icon name="arrow" width={18} height={18} /></Link><Link href="/facilities" className="ui-secondary !bg-white/70">편의시설 찾아보기</Link></div>
+        <div className="flex flex-col sm:flex-row gap-3 mt-7"><Link href="/share-seat" className="ui-primary">하차 정보 공유하기 <Icon name="arrow" width={18} height={18} /></Link><Link href="/find-seat" className="ui-secondary !bg-white/70">하차 정보 찾기</Link></div>
         <p className="text-xs text-ink-muted mt-4">회원가입 화면 없이 가볍게 시작하세요.</p>
       </div>
-      <div className="w-32 sm:w-64 md:w-full max-w-sm mx-auto -mb-3 md:mb-0"><JourneyIllustration /></div>
+      <div className="flex w-full min-w-0 justify-center py-2 sm:py-4 md:py-0">
+        <Image src="/home-logo-fin-transparent.png" alt="SubwayEasy 로고" width={1254} height={1254} priority className="h-auto w-full max-w-[220px] object-contain sm:max-w-[300px] md:max-w-[360px] lg:max-w-[400px]" sizes="(max-width: 639px) 220px, (max-width: 767px) 300px, (max-width: 1023px) 360px, 400px" />
+      </div>
     </section>
     <section aria-labelledby="core-title"><div className="flex items-end justify-between gap-4 mb-4"><div><p className="ui-section-label mb-1">EVERYDAY, EASIER</p><h2 id="core-title" className="text-xl sm:text-2xl font-bold tracking-tight">지하철 일상을 더 편하게</h2></div><span className="hidden sm:block text-xs text-ink-muted">필요한 기능을 한곳에서</span></div><CoreLinks /></section>
     <section className="ui-card flex flex-col sm:flex-row sm:items-center gap-4 justify-between"><div className="flex items-center gap-4"><span className="ui-icon-box !bg-brand-soft"><Icon name="heart" /></span><div><h2 className="font-bold">매일 가는 구간은 즐겨찾기로</h2><p className="text-sm text-ink-muted mt-1">자주 이용하는 역을 이 브라우저에 저장해 두세요.</p></div></div><button aria-expanded={!showLanding} aria-controls="favorites-panel" onClick={() => setShowLanding(value => !value)} className="ui-secondary shrink-0">{showLanding ? "즐겨찾기 열기" : "즐겨찾기 접기"}</button></section>
