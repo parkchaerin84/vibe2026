@@ -8,7 +8,7 @@
 
 **지하철 하차 예정 정보를 공유하고 검색할 수 있는 웹서비스**
 
-일상 속 작은 불편함에서 출발해 실제 데이터 연동 서비스로 발전시킨 개인 프로젝트입니다.
+일상 속 작은 불편함에서 출발해 실제 데이터 연동 서비스로 발전시킨 프로젝트입니다.
 
 [서비스 바로가기](https://subwayeasy.pages.dev/) | [GitHub Repository](https://github.com/parkchaerin84/vibe2026)
 
