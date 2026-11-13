@@ -73,3 +73,34 @@ test("missing references, mismatched lines and no matching reports return an emp
   assert.deepEqual(searchShareCards([], line2, main, search, now), []);
   assert.deepEqual(searchShareCards([row], line2, main, { ...search, carNumber: 9 }, now), []);
 });
+
+const branchRow = { ...row, id: "branch-report", current_line_station_id: member("0211"),
+  exit_line_station_id: member("0246"), direction_label: "신설동 방면", car_number: 10,
+  created_at: "2026-01-01T00:05:00Z" };
+const sinjeongRow = { ...branchRow, id: "sinjeong-report", current_line_station_id: member("0234"),
+  exit_line_station_id: member("0200"), direction_label: "까치산 방면", created_at: "2026-01-01T00:06:00Z" };
+
+test("initial all-route list includes both branches, excludes expired/other-line reports, sorts newest without mutating input", () => {
+  const rows = [row, branchRow, sinjeongRow, { ...row, id: "expired", expires_at: new Date(now).toISOString() },
+    { ...row, id: "hidden-line", line_id: sd.lineId }];
+  const original = [...rows];
+  assert.deepEqual(searchShareCards(rows, line2, null, null, now), [sinjeongRow, branchRow, row]);
+  assert.deepEqual(rows, original);
+});
+
+test("each filter is optional and partial conditions immediately narrow the all-route list", () => {
+  const rows = [row, branchRow, sinjeongRow];
+  assert.deepEqual(searchShareCards(rows, line2, null, { direction: "", carNumber: 10, exitStationId: "" }, now), [sinjeongRow, branchRow]);
+  assert.deepEqual(searchShareCards(rows, line2, null, { direction: "外線", exitStationId: "" }, now), []);
+  assert.deepEqual(searchShareCards(rows, line2, null, { direction: "外線", carNumber: 10, exitStationId: "" }, now), []);
+  assert.deepEqual(searchShareCards(rows, line2, null, { direction: "신설동 방면", exitStationId: "" }, now), [branchRow]);
+  assert.deepEqual(searchShareCards(rows, line2, null, { direction: "", exitStationId: member("0200") }, now), [sinjeongRow]);
+  assert.deepEqual(searchShareCards(rows, line2, null, { direction: "", carNumber: 3, exitStationId: member("0246") }, now), []);
+});
+
+test("clearing every filter restores all routes and a report disappears at its original expiry", () => {
+  const rows = [row, branchRow, sinjeongRow];
+  assert.deepEqual(searchShareCards(rows, line2, branch, null, now), [branchRow]);
+  assert.deepEqual(searchShareCards(rows, line2, null, { direction: "", exitStationId: "" }, now), [sinjeongRow, branchRow, row]);
+  assert.deepEqual(searchShareCards(rows, line2, null, null, Date.parse(row.expires_at)), []);
+});
